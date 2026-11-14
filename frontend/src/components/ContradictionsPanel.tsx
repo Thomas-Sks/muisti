@@ -208,6 +208,7 @@ export function ContradictionCard({ c, labelA = "This article says", labelB = "A
           <div className="text-xs font-semibold uppercase tracking-wide text-ink-2">Possible contradiction: review both passages</div>
           <p className="mt-0.5 text-[15px] font-medium text-ink">{c.topic}</p>
           <p className="mt-1 text-sm text-ink-2">{c.explanation}</p>
+          <Provenance c={c} />
         </div>
       </div>
       <div className="grid md:grid-cols-2">
@@ -216,4 +217,27 @@ export function ContradictionCard({ c, labelA = "This article says", labelB = "A
       </div>
     </Card>
   );
+}
+
+/** Where the finding comes from: dates found in SQL and confirmed by Claude, or figures found by Claude and checked in SQL. */
+function Provenance({ c }: { c: Contradictions["contradictions"][number] }) {
+  if (c.kind === "date") return (
+    <p className="mt-2 inline-flex flex-wrap items-center gap-1.5 rounded-md bg-surface-2 px-2 py-1 text-[11px] text-ink-2">
+      <b className="font-semibold text-ink">Found in MariaDB</b> same anchor date, dates {c.days} day{c.days === 1 ? "" : "s"} apart
+      <span className="text-ink-3">·</span> <b className="font-semibold text-ink">confirmed by Claude</b>
+    </p>
+  );
+  if (c.kind === "number" && c.sql_check) {
+    const vals = [...c.sql_check.a.values, ...c.sql_check.b.values].filter((v) => v.kind === "number");
+    return (
+      <p className="mt-2 inline-flex flex-wrap items-center gap-1.5 rounded-md bg-surface-2 px-2 py-1 text-[11px] text-ink-2">
+        <b className="font-semibold text-ink">Found by Claude</b> <span className="text-ink-3">·</span>
+        <b className="font-semibold text-ink">figures checked in MariaDB</b> against the Wikipedia text:
+        {vals.length === 0 ? <span>no figure to check</span> : vals.map((v, i) => (
+          <span key={i} className={v.found ? "tabular text-success" : "tabular text-[var(--critical)]"}>{v.surface} {v.found ? "✓" : "✗"}</span>
+        ))}
+      </p>
+    );
+  }
+  return null;
 }

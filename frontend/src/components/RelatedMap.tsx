@@ -270,13 +270,14 @@ export default function RelatedMap({ lang, pageId }: { lang: Lang; pageId: numbe
                 <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-xs text-ink-3">
                   <li><b className="font-medium text-ink-2">MariaDB finds the candidates:</b> passages of other articles, in any language, that give the same anchor date but a different date a few days away, and are close in meaning.</li>
                   <li><b className="font-medium text-ink-2">Claude checks each one:</b> same event, and really incompatible? Rejected candidates stay visible.</li>
+                  <li><b className="font-medium text-ink-2">Figures</b> (deaths, strengths) are read by Claude in close passages, then every figure it quotes is looked up in MariaDB: it must be in the Wikipedia text.</li>
                 </ol>
                 <p className="mt-1 text-[11px] text-ink-3">About 15 seconds, then stored for this revision.</p>
                 {checking === sel.key ? (
                   <p className="mt-2 flex items-center gap-2 text-sm text-ink-2"><Loader2 className="size-4 animate-spin text-accent" /> Checking…</p>
                 ) : selContra ? (
                   <div className="mt-2 text-sm">
-                    <p className="mb-1 text-xs text-ink-2"><b className="tabular text-ink">{selContra.pairs_checked}</b> candidates found in SQL ({Math.round(selContra.timings.mariadb_ms)} ms) · <b className="tabular text-ink">{selContra.contradictions.length}</b> confirmed by Claude</p>
+                    <p className="mb-1 text-xs text-ink-2"><b className="tabular text-ink">{selContra.date_candidates ?? selContra.pairs_checked}</b> date candidates from SQL · <b className="tabular text-ink">{selContra.number_pairs ?? 0}</b> passage pairs read for figures · <b className="tabular text-ink">{selContra.contradictions.length}</b> kept</p>
                     {selContra.contradictions.length === 0
                       ? <p className="flex items-center gap-2 text-ink-2"><CircleCheck className="size-4 text-success" /> No contradiction confirmed.</p>
                       : <p className="flex items-center gap-2 font-medium text-ink"><TriangleAlert className="size-4 text-[var(--critical)]" /> {selContra.contradictions.length} possible contradiction{selContra.contradictions.length === 1 ? "" : "s"}, shown below the map.</p>}

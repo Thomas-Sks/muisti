@@ -373,6 +373,25 @@ FACTS_SYSTEM = (
 
 
 def facts(qid: str, refresh: bool = False, cached_only: bool = False) -> dict | None:
+    r = _facts(qid, refresh, cached_only)
+    return _with_sql_check(r) if r and r.get("facts") else r
+
+
+def _with_sql_check(r: dict) -> dict:
+    """Every number and date Claude quotes is looked up in the passage's extracted values (backend/factcheck.py)."""
+    from . import factcheck
+    refs = [(f, v) for f in r["facts"] for v in f["values"]]
+    items = [((r["groups"][f["group_index"]].get(v["lang"]) or {}).get("chunk_id"), v["lang"], v["quote"]) for f, v in refs]
+    checks, t = factcheck.check_many(items)
+    for (f, v), c in zip(refs, checks):
+        v["sql_check"] = c
+    r["sql_check"] = {"sql": factcheck.SQL_SHOWN, "ms": round(t, 1),
+                      "checked": sum(c["status"] == "checked" for c in checks),
+                      "mismatch": sum(c["status"] == "mismatch" for c in checks)}
+    return r
+
+
+def _facts(qid: str, refresh: bool = False, cached_only: bool = False) -> dict | None:
     with db.pool.cursor() as cur:
         arts, _ = db.timed(cur, "SELECT lang, page_id, title, rev_id FROM article WHERE wikidata_id = %(qid)s", {"qid": qid})
         if not arts:

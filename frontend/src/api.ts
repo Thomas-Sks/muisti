@@ -234,14 +234,16 @@ export const api5 = {
 };
 
 export interface ContraPassage { chunk_id: number; lang: Lang; page_id: number; title: string; section: string | null; text: string; rev_id: number; oldid_url: string }
+export interface SqlCheck { status: "checked" | "mismatch" | "none"; values: { surface: string; value: string | number; kind: "number" | "date"; found: boolean }[] }
 export interface Contradictions {
   article: { lang: Lang; page_id: number; title: string; rev_id: number; url: string };
   model: string; pairs_checked: number;
   contradictions: { topic: string; value_a: string; value_b: string; explanation: string; distance: number;
     quote_a: string; quote_b: string; quote_a_en: string; quote_b_en: string; a: ContraPassage; b: ContraPassage;
-    days?: number; same_event?: boolean; verified?: boolean }[];
+    days?: number; same_event?: boolean; verified?: boolean; kind?: "date" | "number";
+    sql_check?: { a: SqlCheck; b: SqlCheck } }[];
   rejected?: Contradictions["contradictions"];
-  method?: string;
+  method?: string; date_candidates?: number; number_pairs?: number;
   sql: string; timings: { mariadb_ms: number; llm_s: number; total_s: number };
 }
 export const api6 = {
@@ -284,7 +286,7 @@ export const wapi = {
     req<Framing>(`/api/topic/${qid}/framing?refresh=${opts.refresh ? 1 : 0}&cached_only=${opts.cachedOnly ? 1 : 0}`),
 };
 
-export interface FactValue { lang: Lang; value: string; quote: string; translation: string; verified: boolean }
+export interface FactValue { lang: Lang; value: string; quote: string; translation: string; verified: boolean; sql_check?: SqlCheck }
 export interface Fact {
   group_index: number; subject: string; category: "date" | "number" | "person" | "place" | "outcome" | "other";
   status: "agree" | "differ" | "missing"; values: FactValue[]; missing_in: Lang[]; note: string;

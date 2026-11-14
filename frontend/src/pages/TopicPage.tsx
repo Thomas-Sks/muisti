@@ -412,6 +412,8 @@ function FactRow({ x, langs, mine, arts, group, open, onToggle, history }: {
                           {src && <SentenceLink lang={v.lang} title={src.title} quote={v.quote} />}
                           {src && <a href={src.oldid_url} target="_blank" rel="noreferrer" className="text-xs text-ink-3 hover:underline">revision {src.rev_id}</a>}
                           {v.verified ? <span className="inline-flex items-center gap-1 text-[11px] text-success"><BadgeCheck className="size-3.5" />quoted verbatim</span> : <span className="text-[11px] text-ink-3">paraphrase</span>}
+                          {v.sql_check?.status === "checked" && <span className="text-[11px] text-success" title="Every number and date of this quote is stored for this passage in MariaDB (chunk_number, chunk_date)">figures found in MariaDB: {v.sql_check.values.map((x) => x.surface).join(", ")}</span>}
+                          {v.sql_check?.status === "mismatch" && <span className="text-[11px] text-[var(--critical)]">not in the passage: {v.sql_check.values.filter((x) => !x.found).map((x) => x.surface).join(", ")}</span>}
                         </div>
                       </td>
                     </tr>
