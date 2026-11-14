@@ -1,6 +1,7 @@
 // Map of related articles: starts from one article, each click adds its nearest articles by meaning
 // (MariaDB HNSW index on whole-article vectors). Any article can be checked against the others for
-// contradicting facts; results are stored in MariaDB and drawn as red links.
+// contradicting facts; results are stored in MariaDB and drawn as red links. Nothing is shown in red before the
+// visitor asks for a check: a check returns the stored result at once when someone has already run it.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -102,7 +103,7 @@ export default function RelatedMap({ lang, pageId }: { lang: Lang; pageId: numbe
   }, [qc, centre]);
 
   const reset = useCallback(() => {
-    setNodes(new Map()); setEdges([]); setSelected(centre); setError(null);
+    setNodes(new Map()); setEdges([]); setSelected(centre); setError(null); setContra({});
     nodesRef.current = new Map();
     void expand(centre);
   }, [centre, expand]);
@@ -141,15 +142,6 @@ export default function RelatedMap({ lang, pageId }: { lang: Lang; pageId: numbe
       setChecking(null);
     }
   };
-
-  // results already stored in MariaDB are loaded at once (no new check, no cost)
-  useEffect(() => {
-    for (const n of nodes.values()) {
-      if (n.contradictions != null && !contra[n.key] && checking !== n.key) {
-        wapi4.contradictions(n.lang, n.page_id).then((r) => applyContra(n.key, r)).catch(() => {});
-      }
-    }
-  }, [nodes, contra, checking, applyContra]);
 
   // red links: one per pair of articles with at least one possible contradiction
   const contraEdges = useMemo(() => {
@@ -220,7 +212,8 @@ export default function RelatedMap({ lang, pageId }: { lang: Lang; pageId: numbe
             {[...nodes.values()].map((n) => {
               const isCentre = n.key === centre, isSel = n.key === selected;
               const r = isCentre ? 13 : 8;
-              const flagged = (n.contradictions ?? 0) > 0;
+              const mine = contra[n.key];                    // only what this visitor has checked is coloured
+              const flagged = (mine?.contradictions.length ?? 0) > 0;
               return (
                 <g key={n.key} transform={`translate(${n.x},${n.y})`} className="cursor-pointer"
                   onClick={() => { setSelected(n.key); setCheckError(null); void expand(n.key); }}>
@@ -232,7 +225,7 @@ export default function RelatedMap({ lang, pageId }: { lang: Lang; pageId: numbe
                   {n.loading && <circle r={r + 3} fill="none" stroke="var(--accent)" strokeWidth={1.5} strokeDasharray="4 4">
                     <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="1s" repeatCount="indefinite" />
                   </circle>}
-                  {n.contradictions === 0 && <circle cx={r - 1} cy={-r + 1} r={3.5} fill="var(--success)" />}
+                  {mine && mine.contradictions.length === 0 && <circle cx={r - 1} cy={-r + 1} r={3.5} fill="var(--success)" />}
                   <text y={r + 13} textAnchor="middle" fontSize={isCentre ? 13 : 11} fontWeight={isCentre || isSel ? 600 : 400}
                     fill="var(--text-primary)" stroke="#fff" strokeWidth={3} paintOrder="stroke">{short(n.title, isCentre ? 34 : 24)}</text>
                 </g>
@@ -272,7 +265,7 @@ export default function RelatedMap({ lang, pageId }: { lang: Lang; pageId: numbe
                   <li><b className="font-medium text-ink-2">Claude checks each one:</b> same event, and really incompatible? Rejected candidates stay visible.</li>
                   <li><b className="font-medium text-ink-2">Figures</b> (deaths, strengths) are read by Claude in close passages, then every figure it quotes is looked up in MariaDB: it must be in the Wikipedia text.</li>
                 </ol>
-                <p className="mt-1 text-[11px] text-ink-3">About 15 seconds, then stored for this revision.</p>
+                <p className="mt-1 text-[11px] text-ink-3">About 15 seconds the first time, then stored for this revision.</p>
                 {checking === sel.key ? (
                   <p className="mt-2 flex items-center gap-2 text-sm text-ink-2"><Loader2 className="size-4 animate-spin text-accent" /> Checking…</p>
                 ) : selContra ? (
@@ -287,8 +280,9 @@ export default function RelatedMap({ lang, pageId }: { lang: Lang; pageId: numbe
                 ) : (
                   <div className="mt-2">
                     <Button kind="primary" onClick={() => void check(sel.key)} disabled={!!checking}>
-                      {sel.contradictions != null ? "Show the stored result" : "Check this article"}
+                      Check this article
                     </Button>
+                    {sel.contradictions != null && !checking && <p className="mt-1 text-[11px] text-ink-3">Already checked by someone: the stored result appears at once.</p>}
                     {checking && <p className="mt-1 text-[11px] text-ink-3">Another check is running.</p>}
                   </div>
                 )}
