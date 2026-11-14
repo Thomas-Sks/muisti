@@ -1,0 +1,12 @@
+# SITE_ADDRESS: a domain (or <ip-with-dashes>.sslip.io) for automatic HTTPS, or ":80" for plain HTTP.
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

@@ -42,6 +42,28 @@ def health() -> dict:
 _stats_cache: tuple[float, dict] | None = None
 
 
+# ── Per-visitor limit on the endpoints that may call Claude (protects the demo budget) ──
+AI_PATHS = ("/facts", "/framing", "/missing", "/translate", "/check", "/contradictions")
+AI_LIMIT = int(__import__("os").environ.get("AI_REQUESTS_PER_HOUR", "30"))
+_ai_hits: dict[str, list[float]] = {}
+
+
+@app.middleware("http")
+async def ai_rate_limit(request, call_next):
+    path = request.url.path
+    q = request.url.query
+    if path.startswith("/api/") and any(k in path for k in AI_PATHS) and "cached_only=1" not in q and "cached_only=true" not in q:
+        ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "?")).split(",")[0].strip()
+        now = time.monotonic()
+        hits = [t for t in _ai_hits.get(ip, []) if now - t < 3600]
+        if len(hits) >= AI_LIMIT:
+            from fastapi.responses import JSONResponse
+            return JSONResponse({"detail": "You have reached the limit of live AI analyses for this demo. Try again later; stored results stay available."}, status_code=429)
+        hits.append(now)
+        _ai_hits[ip] = hits
+    return await call_next(request)
+
+
 @app.get("/api/stats")
 def stats() -> dict:
     """Dataset sizes, straight from MariaDB (shown on the landing page)."""
@@ -201,6 +223,14 @@ def check(body: CheckIn) -> dict:
         return llmcheck.check(body.q.strip())
     except anthropic.RateLimitError:
         raise HTTPException(429, "The AI service is busy right now. Try again in a minute.")
+    except anthropic.APIStatusError as e:
+        text = str(e).lower()
+        if "credit balance" in text or "billing" in text:          # the demo's Anthropic credit is used up
+            log.warning("AI credit exhausted: %s", e)
+            raise HTTPException(402, "Live AI analysis is paused: the demo's AI budget has been used up. "
+                                     "Everything already computed (and all SQL features) still works.")
+        log.warning("AI analysis failed: %s", e)
+        raise HTTPException(502, "The AI service could not be reached. Try again.")
     except (anthropic.APIConnectionError, anthropic.APIStatusError) as e:
         log.warning("AI check failed: %s", e)
         raise HTTPException(502, "The AI service could not be reached. Try again.")
@@ -240,6 +270,14 @@ def contradictions(lang: Literal["fi", "sv", "en"], page_id: int) -> dict:
         r = contra.find(lang, page_id)
     except anthropic.RateLimitError:
         raise HTTPException(429, "The AI service is busy right now. Try again in a minute.")
+    except anthropic.APIStatusError as e:
+        text = str(e).lower()
+        if "credit balance" in text or "billing" in text:          # the demo's Anthropic credit is used up
+            log.warning("AI credit exhausted: %s", e)
+            raise HTTPException(402, "Live AI analysis is paused: the demo's AI budget has been used up. "
+                                     "Everything already computed (and all SQL features) still works.")
+        log.warning("AI analysis failed: %s", e)
+        raise HTTPException(502, "The AI service could not be reached. Try again.")
     except (anthropic.APIConnectionError, anthropic.APIStatusError) as e:
         log.warning("contradiction check failed: %s", e)
         raise HTTPException(502, "The AI service could not be reached. Try again.")
@@ -298,6 +336,14 @@ def topic_framing(qid: str, refresh: bool = False, cached_only: bool = False) ->
         r = topics_mod.framing(qid, refresh=refresh, cached_only=cached_only)
     except anthropic.RateLimitError:
         raise HTTPException(429, "The AI service is busy right now. Try again in a minute.")
+    except anthropic.APIStatusError as e:
+        text = str(e).lower()
+        if "credit balance" in text or "billing" in text:          # the demo's Anthropic credit is used up
+            log.warning("AI credit exhausted: %s", e)
+            raise HTTPException(402, "Live AI analysis is paused: the demo's AI budget has been used up. "
+                                     "Everything already computed (and all SQL features) still works.")
+        log.warning("AI analysis failed: %s", e)
+        raise HTTPException(502, "The AI service could not be reached. Try again.")
     except (anthropic.APIConnectionError, anthropic.APIStatusError) as e:
         log.warning("framing failed: %s", e)
         raise HTTPException(502, "The AI service could not be reached. Try again.")
@@ -319,6 +365,14 @@ def _ai_call(fn):
         return fn()
     except anthropic.RateLimitError:
         raise HTTPException(429, "The AI service is busy right now. Try again in a minute.")
+    except anthropic.APIStatusError as e:
+        text = str(e).lower()
+        if "credit balance" in text or "billing" in text:          # the demo's Anthropic credit is used up
+            log.warning("AI credit exhausted: %s", e)
+            raise HTTPException(402, "Live AI analysis is paused: the demo's AI budget has been used up. "
+                                     "Everything already computed (and all SQL features) still works.")
+        log.warning("AI analysis failed: %s", e)
+        raise HTTPException(502, "The AI service could not be reached. Try again.")
     except (anthropic.APIConnectionError, anthropic.APIStatusError) as e:
         log.warning("AI analysis failed: %s", e)
         raise HTTPException(502, "The AI service could not be reached. Try again.")

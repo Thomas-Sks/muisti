@@ -1,0 +1,41 @@
+# Demo deployment: docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d --build
+services:
+  mariadb:
+    image: mariadb:12.3
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - muisti-data:/var/lib/mysql            # filled once by deploy/copy-db.sh (physical copy, HNSW indexes included)
+      - ./mariadb-prod.cnf:/etc/mysql/conf.d/muisti.cnf:ro
+    mem_limit: 8g
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+    restart: unless-stopped
+  api:
+    build: { context: .., dockerfile: deploy/Dockerfile.api }
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      DB_USER: muisti
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: muisti
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      AI_REQUESTS_PER_HOUR: ${AI_REQUESTS_PER_HOUR:-30}
+    depends_on:
+      mariadb: { condition: service_healthy }
+    mem_limit: 6g
+    restart: unless-stopped
+  web:
+    build: { context: .., dockerfile: deploy/Dockerfile.web }
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports: ["80:80", "443:443"]
+    volumes: [caddy-data:/data]
+    depends_on: [api]
+    restart: unless-stopped
+volumes:
+  muisti-data:
+  caddy-data:
