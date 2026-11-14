@@ -238,7 +238,10 @@ export interface Contradictions {
   article: { lang: Lang; page_id: number; title: string; rev_id: number; url: string };
   model: string; pairs_checked: number;
   contradictions: { topic: string; value_a: string; value_b: string; explanation: string; distance: number;
-    quote_a: string; quote_b: string; quote_a_en: string; quote_b_en: string; a: ContraPassage; b: ContraPassage }[];
+    quote_a: string; quote_b: string; quote_a_en: string; quote_b_en: string; a: ContraPassage; b: ContraPassage;
+    days?: number; same_event?: boolean; verified?: boolean }[];
+  rejected?: Contradictions["contradictions"];
+  method?: string;
   sql: string; timings: { mariadb_ms: number; llm_s: number; total_s: number };
 }
 export const api6 = {

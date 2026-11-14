@@ -267,16 +267,18 @@ export default function RelatedMap({ lang, pageId }: { lang: Lang; pageId: numbe
               )}
               <div className="border-t border-line pt-3">
                 <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-2">Contradictions with other articles</h4>
-                <p className="mt-1 text-xs text-ink-3">
-                  Passages with dates or numbers are matched to the closest passages of other articles in MariaDB, in any
-                  language; Claude Sonnet flags pairs that cannot both be true. About 15 seconds, then stored.
-                </p>
+                <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-xs text-ink-3">
+                  <li><b className="font-medium text-ink-2">MariaDB finds the candidates:</b> passages of other articles, in any language, that give the same anchor date but a different date a few days away, and are close in meaning.</li>
+                  <li><b className="font-medium text-ink-2">Claude checks each one:</b> same event, and really incompatible? Rejected candidates stay visible.</li>
+                </ol>
+                <p className="mt-1 text-[11px] text-ink-3">About 15 seconds, then stored for this revision.</p>
                 {checking === sel.key ? (
                   <p className="mt-2 flex items-center gap-2 text-sm text-ink-2"><Loader2 className="size-4 animate-spin text-accent" /> Checking…</p>
                 ) : selContra ? (
                   <div className="mt-2 text-sm">
+                    <p className="mb-1 text-xs text-ink-2"><b className="tabular text-ink">{selContra.pairs_checked}</b> candidates found in SQL ({Math.round(selContra.timings.mariadb_ms)} ms) · <b className="tabular text-ink">{selContra.contradictions.length}</b> confirmed by Claude</p>
                     {selContra.contradictions.length === 0
-                      ? <p className="flex items-center gap-2 text-ink-2"><CircleCheck className="size-4 text-success" /> No conflicting facts in {selContra.pairs_checked} close pairs.</p>
+                      ? <p className="flex items-center gap-2 text-ink-2"><CircleCheck className="size-4 text-success" /> No contradiction confirmed.</p>
                       : <p className="flex items-center gap-2 font-medium text-ink"><TriangleAlert className="size-4 text-[var(--critical)]" /> {selContra.contradictions.length} possible contradiction{selContra.contradictions.length === 1 ? "" : "s"}, shown below the map.</p>}
                     <p className="mt-1 text-[11px] text-ink-3">{selContra.cached ? "Stored result for this revision" : `Checked now in ${selContra.timings.total_s}s`} ·{" "}
                       <button onClick={() => void check(sel.key, true)} className="font-medium text-accent hover:underline">check again</button></p>
@@ -303,8 +305,38 @@ export default function RelatedMap({ lang, pageId }: { lang: Lang; pageId: numbe
           {selContra.contradictions.map((c, i) => <ContradictionCard key={i} c={c} />)}
         </div>
       )}
+      {selContra?.rejected && selContra.rejected.length > 0 && <Rejected items={selContra.rejected} />}
+      {selContra?.method === "sql+claude" && <SqlPanel title="Contradiction candidates (anchor date shared, another date a few days apart, close in meaning)"
+        sql={selContra.sql} timings={[{ label: "SQL", ms: selContra.timings.mariadb_ms }]} />}
       {sql && <SqlPanel title="Nearest articles (HNSW index, the article's stored vector as the query)" sql={sql.sql}
         timings={[{ label: "SQL", ms: sql.ms }]} />}
+    </div>
+  );
+}
+
+/** Candidates found in SQL that Claude judged not to be contradictions, with its reason. */
+function Rejected({ items }: { items: NonNullable<ContraResult["rejected"]> }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-lg border border-line bg-surface-1">
+      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm">
+        <span className="font-medium text-ink-2">{items.length} candidate{items.length === 1 ? "" : "s"} rejected by Claude</span>
+        <span className="text-xs font-medium text-accent">{open ? "Hide" : "Show why"}</span>
+      </button>
+      {open && (
+        <ul className="divide-y divide-line border-t border-line">
+          {items.map((c, i) => (
+            <li key={i} className="px-4 py-2.5 text-[13px]">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="tabular font-medium text-ink">{c.value_a}</span><span className="text-ink-3">vs</span>
+                <span className="tabular font-medium text-ink">{c.value_b}</span>
+                <span className="text-ink-3">in</span><LangBadge lang={c.b.lang} size="xs" /><span className="text-ink-2">{c.b.title}</span>
+              </div>
+              <p className="mt-0.5 text-ink-2">{c.explanation}</p>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

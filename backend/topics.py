@@ -548,7 +548,7 @@ def missing_summaries(qid: str, target: str) -> dict | None:
 RELATED_SQL = f"""SELECT {HINT} a.lang, a.page_id, a.title, a.wikidata_id, ROUND(x.d, 3) AS distance,
        (SELECT COUNT(*) FROM article o WHERE o.wikidata_id = a.wikidata_id) AS languages,
        (SELECT JSON_LENGTH(an.result, '$.contradictions') FROM analysis an
-        WHERE an.kind = 'contra' AND an.wikidata_id = CONCAT(a.lang, ':', a.page_id)
+        WHERE an.kind = 'contra2' AND an.wikidata_id = CONCAT(a.lang, ':', a.page_id)
           AND an.rev_key = CONCAT(a.lang, ':', a.rev_id) LIMIT 1) AS contradictions
 FROM (SELECT lang, page_id, VEC_DISTANCE_COSINE(embedding, %(vec)s) AS d
       FROM article_vector ORDER BY d LIMIT 60) x
@@ -561,7 +561,7 @@ LIMIT %(limit)s"""
 def related(lang: str, page_id: int, limit: int = 10) -> dict | None:
     with db.pool.cursor() as cur:
         cur.execute(f"SELECT {HINT} a.title, a.wikidata_id, v.embedding, "
-                    "(SELECT JSON_LENGTH(an.result, '$.contradictions') FROM analysis an WHERE an.kind = 'contra' "
+                    "(SELECT JSON_LENGTH(an.result, '$.contradictions') FROM analysis an WHERE an.kind = 'contra2' "
                     " AND an.wikidata_id = CONCAT(a.lang, ':', a.page_id) AND an.rev_key = CONCAT(a.lang, ':', a.rev_id) LIMIT 1) AS contradictions "
                     "FROM article a JOIN article_vector v USING (lang, page_id) "
                     "WHERE a.lang = %s AND a.page_id = %s", (lang, page_id))
@@ -578,8 +578,9 @@ def related(lang: str, page_id: int, limit: int = 10) -> dict | None:
 
 
 def contradictions_stored(lang: str, page_id: int, refresh: bool = False) -> dict | None:
-    """Contradictions of one article with others (backend/contradictions.py), stored in `analysis`."""
-    from . import contradictions as contra
+    """Date contradictions of one article with others: candidates found in SQL, each checked by Claude
+    (backend/datecontra.py). Stored in `analysis` per article revision (kind 'contra2')."""
+    from . import datecontra
     with db.pool.cursor() as cur:
         cur.execute("SELECT rev_id FROM article WHERE lang = %s AND page_id = %s", (lang, page_id))
         row = cur.fetchone()
@@ -587,15 +588,14 @@ def contradictions_stored(lang: str, page_id: int, refresh: bool = False) -> dic
             return None
         key, rk = f"{lang}:{page_id}", f"{lang}:{row['rev_id']}"
         if not refresh:
-            cur.execute(CACHE_GET_SQL, ("contra", key, rk))
+            cur.execute(CACHE_GET_SQL, ("contra2", key, rk))
             hit = cur.fetchone()
             if hit:
                 return json.loads(hit["result"]) | {"cached": True}
-    t0 = time.perf_counter()
-    r = contra.find.__wrapped__(lang, page_id) if hasattr(contra.find, "__wrapped__") else contra.find(lang, page_id)
+    r = datecontra.find(lang, page_id)
     if r is None:
         return None
     with db.pool.cursor() as cur:
-        cur.execute(CACHE_PUT_SQL, ("contra", key, rk, contra.MODEL, json.dumps(r, ensure_ascii=False, default=str), None, None,
-                                    round(time.perf_counter() - t0, 1)))
+        cur.execute(CACHE_PUT_SQL, ("contra2", key, rk, datecontra.MODEL, json.dumps(r, ensure_ascii=False, default=str),
+                                    None, r.get("tokens"), r["timings"]["total_s"]))
     return r | {"cached": False}
