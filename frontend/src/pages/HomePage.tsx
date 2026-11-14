@@ -5,6 +5,7 @@ import { ChevronRight, FilePlus2, History, Loader2, Megaphone, Scale, Search } f
 import clsx from "clsx";
 import { wapi, wapi2, type Lang, type TopicHitW } from "../api";
 import { ErrorBox, LangBadge, nf } from "../ui";
+import WordGlobe from "../components/WordGlobe";
 
 const LANGS: Lang[] = ["fi", "sv", "en"];
 const DEMO = "Q211855";   // Finnish Civil War: analyses stored, used for the live examples below
@@ -33,8 +34,9 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
-      <div className="rounded-xl border border-line px-5 pb-8 pt-10 shadow-sm" style={{ background: "var(--hero)" }}>
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="rounded-xl border border-line px-5 pb-8 pt-8 shadow-sm" style={{ background: "var(--hero)" }}>
+      <div className="mx-auto grid max-w-6xl items-center gap-6 lg:grid-cols-[minmax(0,1fr)_440px]">
+      <div className="space-y-6">
       <section className="space-y-3">
         <div className="flex gap-1.5">{LANGS.map((l) => <LangBadge key={l} lang={l} />)}</div>
         <h1 className="serif text-[32px] leading-tight text-ink-strong">
@@ -58,6 +60,8 @@ export default function HomePage() {
         </div>
       </form>
 
+      </div>
+      <div className="hidden justify-center lg:flex"><WordGlobe size={440} /></div>
       </div>
       </div>
       <div className="mx-auto max-w-4xl space-y-8">
