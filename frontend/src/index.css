@@ -99,3 +99,9 @@
   :where(a, button, select, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   input:focus-visible, textarea:focus-visible { outline: none; }
 }
+
+/* Landing-page globe: the whole rotation is a CSS animation (compositor), nothing runs in JavaScript. */
+@keyframes word-globe-spin { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+.word-globe-spin { animation: word-globe-spin 60s linear infinite; }
+.word-globe:hover .word-globe-spin { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .word-globe-spin { animation: none; } }
