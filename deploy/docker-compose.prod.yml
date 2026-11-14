@@ -7,7 +7,7 @@ services:
     volumes:
       - muisti-data:/var/lib/mysql            # filled once by deploy/copy-db.sh (physical copy, HNSW indexes included)
       - ./mariadb-prod.cnf:/etc/mysql/conf.d/muisti.cnf:ro
-    mem_limit: 8g
+    mem_limit: 4g
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
@@ -26,7 +26,7 @@ services:
       AI_REQUESTS_PER_HOUR: ${AI_REQUESTS_PER_HOUR:-30}
     depends_on:
       mariadb: { condition: service_healthy }
-    mem_limit: 6g
+    mem_limit: 3500m
     restart: unless-stopped
   web:
     build: { context: .., dockerfile: deploy/Dockerfile.web }
