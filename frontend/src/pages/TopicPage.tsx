@@ -10,7 +10,7 @@ import {
   api, api2, wapi, wapi2, wapi3, wapi5, type Fact, type StaleItem, type FactsResult, type Framing, type FramingDiff, type FramingPassage, type Lang,
   type TopicOverview,
 } from "../api";
-import { ArticleLinks, Button, CopyButton, ErrorBox, LANG_NAME, LangBadge, Message, Segmented, Spinner, SqlPanel, Tabs, displayText, fmtDate, nf } from "../ui";
+import { Button, CopyButton, ErrorBox, LANG_NAME, LangBadge, Message, Segmented, Spinner, SqlPanel, displayText, fmtDate, nf } from "../ui";
 import { attribution, mineFirst, talkNote, useEditingLang, wiki } from "../wiki";
 import TimeMachinePage from "./TimeMachinePage";
 import { WarDetail } from "./RadarPage";
@@ -63,7 +63,6 @@ export default function TopicPage() {
   const mapArt = arts[mine] ?? t.articles[0];
   const fd = facts.data?.available ? facts.data : null;
   const wd = framing.data?.available && !framing.data.pending ? framing.data : null;
-  const cards = [...mineFirst(mine, available), ...LANGS.filter((l) => !available.includes(l))];
 
   return (
     <div>

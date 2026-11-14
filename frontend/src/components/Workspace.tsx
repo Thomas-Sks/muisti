@@ -310,7 +310,7 @@ function Paragraph({ p, spans, para, isSel, onSelect }: {
 
 // ── Cards ──────────────────────────────────────────────────────────────────────
 
-function IssueCard({ c, open, onOpen, statusOf, setStatus, d, qid }: {
+function IssueCard({ c, open, onOpen, statusOf, setStatus, d }: {
   c: CardModel; open: boolean; onOpen: () => void; statusOf: (id: string) => IssueStatus;
   setStatus: (id: string, s: IssueStatus) => void; d: Workspace; qid: string;
 }) {
