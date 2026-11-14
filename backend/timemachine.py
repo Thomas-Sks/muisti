@@ -59,11 +59,11 @@ ARTICLE_LOOKUP_SQL = f"""SELECT {HINT} h.page_id, h.title, h.len, h.row_start AS
 FROM article_history h
 WHERE h.page_id = %(page_id)s"""
 
-TITLE_SEARCH_SQL = f"""SELECT {HINT} h.page_id, h.title,
-       (SELECT COUNT(*) FROM revision r WHERE r.page_id = h.page_id) AS versions
-FROM article_history h
-WHERE h.title LIKE %(prefix)s
-ORDER BY versions DESC
+# article_controversy holds one row per article with history and its revision count (edits): no COUNT per match.
+TITLE_SEARCH_SQL = f"""SELECT {HINT} page_id, title, edits AS versions
+FROM article_controversy
+WHERE title LIKE %(prefix)s
+ORDER BY edits DESC
 LIMIT 12"""
 
 CONTROVERSIAL_SQL = f"""SELECT {HINT} page_id, title, controversy_m, mutual_pairs, named_reverts, reverts, edits, peak_year

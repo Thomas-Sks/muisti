@@ -45,7 +45,7 @@ JOIN article a ON a.lang = c.lang AND a.page_id = c.page_id
 GROUP BY a.lang, a.page_id, a.wikidata_id, a.title
 ORDER BY d"""
 
-VERSIONS_SQL = f"""SELECT {HINT} lang, page_id, wikidata_id, title, rev_id, url, date_modified, LENGTH(text) AS len
+VERSIONS_SQL = f"""SELECT {HINT} lang, page_id, wikidata_id, title, rev_id, url, date_modified, text_len AS len
 FROM article WHERE wikidata_id IN ({{ids}})"""
 
 
@@ -96,7 +96,7 @@ def search_topics(q: str) -> dict:
 
 # ── Overview ────────────────────────────────────────────────────────────────────
 
-OVERVIEW_SQL = f"""SELECT {HINT} a.lang, a.page_id, a.title, a.rev_id, a.url, a.date_modified, LENGTH(a.text) AS len,
+OVERVIEW_SQL = f"""SELECT {HINT} a.lang, a.page_id, a.title, a.rev_id, a.url, a.date_modified, a.text_len AS len,
        (SELECT COUNT(*) FROM chunk c WHERE c.lang = a.lang AND c.page_id = a.page_id) AS passages,
        (SELECT COUNT(DISTINCT c.section) FROM chunk c WHERE c.lang = a.lang AND c.page_id = a.page_id) AS sections
 FROM article a WHERE a.wikidata_id = %(qid)s"""

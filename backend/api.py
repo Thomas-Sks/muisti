@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from . import db, insights, search as search_mod, timemachine, wars as wars_mod
+from . import config, db, insights, search as search_mod, timemachine, wars as wars_mod
 
 log = logging.getLogger("muisti")
 app = FastAPI(title="Muisti: Wikipedia that remembers", version="0.2.0")
@@ -38,6 +39,9 @@ def health() -> dict:
     return {"status": "ok", "mariadb": version}
 
 
+_stats_cache: tuple[float, dict] | None = None
+
+
 @app.get("/api/stats")
 def stats() -> dict:
     """Dataset sizes, straight from MariaDB (shown on the landing page)."""
@@ -52,10 +56,13 @@ def stats() -> dict:
         "versions": "SELECT COUNT(*) AS n FROM revision",
         "history_range": "SELECT MIN(ts) AS first, MAX(ts) AS last FROM revision",
     }
+    global _stats_cache
+    if _stats_cache and time.monotonic() - _stats_cache[0] < 600:      # counts change only on reload
+        return _stats_cache[1]
     out = {}
     with db.pool.cursor() as cur:
         for k, sql in q.items():
-            cur.execute(sql)
+            cur.execute(sql.replace("SELECT ", f"SELECT /*+ MAX_EXECUTION_TIME({config.QUERY_TIMEOUT_MS}) */ ", 1))
             rows = cur.fetchall()
             if k == "articles_by_lang":
                 out[k] = {r["lang"]: r["n"] for r in rows}
@@ -63,6 +70,7 @@ def stats() -> dict:
                 out[k] = {kk: (vv.isoformat() if vv else None) for kk, vv in rows[0].items()}
             else:
                 out[k] = rows[0]["n"]
+    _stats_cache = (time.monotonic(), out)
     return out
 
 
@@ -249,7 +257,7 @@ def s_articles(prefix: str = Query(min_length=2, max_length=100)) -> list[dict]:
     with db.pool.cursor() as cur:
         cur.execute("""SELECT /*+ MAX_EXECUTION_TIME(3000) */ a.lang, a.page_id, a.title,
                               (SELECT COUNT(*) FROM chunk c WHERE c.lang = a.lang AND c.page_id = a.page_id) AS passages
-                       FROM article a WHERE a.title LIKE %s ORDER BY LENGTH(a.text) DESC LIMIT 12""",
+                       FROM article a WHERE a.title LIKE %s ORDER BY a.text_len DESC LIMIT 12""",
                     (like_escape(prefix.strip()) + "%",))
         return list(cur.fetchall())
 

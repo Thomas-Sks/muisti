@@ -158,13 +158,15 @@ JOIN article a ON a.lang = c.lang AND a.page_id = c.page_id
 WHERE a.wikidata_id = %(qid)s
 ORDER BY c.lang, c.chunk_idx"""
 
-TOPICS_SQL = f"""SELECT {HINT} fi.wikidata_id, fi.title AS fi_title, sv.title AS sv_title, en.title AS en_title,
-       LENGTH(fi.text) AS fi_len, LENGTH(sv.text) AS sv_len, LENGTH(en.text) AS en_len
-FROM article fi
-JOIN article sv ON sv.wikidata_id = fi.wikidata_id AND sv.lang = 'sv'
-JOIN article en ON en.wikidata_id = fi.wikidata_id AND en.lang = 'en'
-WHERE fi.lang = 'fi' AND (fi.title LIKE %(p)s OR sv.title LIKE %(p)s OR en.title LIKE %(p)s)
-ORDER BY LENGTH(fi.text) + LENGTH(sv.text) + LENGTH(en.text) DESC
+# Matching topics first (scan of the narrow title_qid index, never the text), then their three editions.
+TOPICS_SQL = f"""WITH m AS (SELECT DISTINCT wikidata_id FROM article WHERE title LIKE %(p)s AND wikidata_id IS NOT NULL)
+SELECT {HINT} fi.wikidata_id, fi.title AS fi_title, sv.title AS sv_title, en.title AS en_title,
+       fi.text_len AS fi_len, sv.text_len AS sv_len, en.text_len AS en_len
+FROM m
+JOIN article fi ON fi.wikidata_id = m.wikidata_id AND fi.lang = 'fi'
+JOIN article sv ON sv.wikidata_id = m.wikidata_id AND sv.lang = 'sv'
+JOIN article en ON en.wikidata_id = m.wikidata_id AND en.lang = 'en'
+ORDER BY fi.text_len + sv.text_len + en.text_len DESC
 LIMIT 15"""
 
 COVERED = 0.40     # cosine distance above which a passage has no counterpart. Calibrated on Talvisota: cross-language median is 0.31-0.35; > 0.40 = language-specific content (medals, art, local detail)
