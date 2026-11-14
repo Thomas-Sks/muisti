@@ -61,6 +61,41 @@ def _cached(cur, kind: str, key: str, rk: str) -> dict | None:
     return json.loads(row["result"]) if row else None
 
 
+def _compare_marks(f: dict | None, w: dict | None, lang: str, other: str, text_of: dict) -> dict:
+    """Highlights for the side-by-side view: a fact that differs is marked in both columns, a fact one edition
+    leaves out only in the column that states it, a wording difference in both. `key` links the two sides."""
+    out = {lang: [], other: []}
+
+    def put(side: str, chunk: int | None, quote: str | None, **m) -> None:
+        sp = _span(text_of.get(chunk, ""), quote) if chunk else None
+        if sp:
+            out[side].append({"chunk_id": chunk, "start": sp[0], "end": sp[1], **m})
+
+    for i, x in enumerate((f or {}).get("facts") or []):
+        if x["status"] == "agree":
+            continue
+        grp = f["groups"][x["group_index"]]
+        vals = {v["lang"]: v for v in x["values"]}
+        a, b = vals.get(lang), vals.get(other)
+        if a and b and x["status"] == "differ":
+            for side, v in ((lang, a), (other, b)):
+                put(side, (grp.get(side) or {}).get("chunk_id"), v["quote"], key=f"fact:{i}", type="differ",
+                    title=x["subject"], value=v.get("value"), vs=(b if side == lang else a).get("value"))
+        elif (a or b) and not (a and b):
+            side, v, absent = (lang, a, other) if a else (other, b, lang)
+            if absent in x.get("missing_in", []) or x["status"] == "missing":
+                put(side, (grp.get(side) or {}).get("chunk_id"), v["quote"], key=f"fact:{i}", type="only",
+                    title=x["subject"], value=v.get("value"), vs=None)
+    for i, d in enumerate((w or {}).get("differences") or []):
+        grp = w["groups"][d["group_index"]]
+        sides = {q["lang"]: q for q in d["quotes"] if q["lang"] in (lang, other)}
+        if len(sides) == 2:
+            for side, q in sides.items():
+                put(side, (grp.get(side) or {}).get("chunk_id"), q["quote"], key=f"wording:{i}", type="wording",
+                    title=d["title"], value=None, vs=None)
+    return out
+
+
 def build(qid: str, lang: str) -> dict | None:
     from . import topics
     from .insights import COVERED, gaps
@@ -157,6 +192,8 @@ def build(qid: str, lang: str) -> dict | None:
                                 "distance": (p["matches"].get(lang) or {}).get("distance")}
                                for p in d["passages"]] for o, d in g["languages"].items() if o != lang},
         "covered": COVERED,
+        "compare": {o: _compare_marks(f, w, lang, o, {p["chunk_id"]: p["text"] for p in passages + d["passages"]})
+                    for o, d in g["languages"].items() if o != lang},
     }
 
 

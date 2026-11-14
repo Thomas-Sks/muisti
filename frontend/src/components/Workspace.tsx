@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { ArrowUpRight, Check, CircleCheck, Loader2, PanelRightClose, PanelRightOpen, RotateCcw, X } from "lucide-react";
 import {
+  type CompareMark,
   wapi, wapi2, wapi3, wapi4, wapi6, type IssueStatus, type IssueType, type Lang, type Workspace, type WsIssue,
   type WsOtherPassage, type WsPassage,
 } from "../api";
@@ -482,8 +483,47 @@ function MissingItem({ m, d, st, onSet }: { m: WsIssue; d: Workspace; st: IssueS
 
 // ── Two editions side by side (read-only) ──────────────────────────────────────
 
+const CMP_STYLE: Record<CompareMark["type"], string> = {
+  differ: "bg-[color-mix(in_oklab,var(--diff-removed)_55%,transparent)] decoration-[#c58a00]",
+  only: "bg-[color-mix(in_oklab,var(--accent)_16%,transparent)] decoration-[var(--accent)]",
+  wording: "bg-[#efe7ff] decoration-[#7c3aed]",
+};
+
+/** One passage of the side-by-side view with its highlights; hovering a highlight lights up its counterpart. */
+function CompareText({ text, marks, lang, other, hot, setHot, onJump }: {
+  text: string; marks: CompareMark[]; lang: Lang; other: Lang; hot: string | null;
+  setHot: (k: string | null) => void; onJump: (k: string) => void;
+}) {
+  const parts: React.ReactNode[] = [];
+  let at = 0;
+  for (const m of [...marks].sort((a, b) => a.start - b.start)) {
+    if (m.start < at) continue;
+    if (m.start > at) parts.push(displayText(text.slice(at, m.start)));
+    const tip = m.type === "differ" ? `${m.title}. ${LANG_NAME[lang]}: ${m.value}. ${LANG_NAME[other]}: ${m.vs}.`
+      : m.type === "only" ? `${m.title}: not stated in the ${LANG_NAME[other]} article.` : `Wording: ${m.title}`;
+    parts.push(
+      <mark key={m.key + m.start} data-key={m.key} title={tip}
+        onMouseEnter={() => setHot(m.key)} onMouseLeave={() => setHot(null)}
+        onClick={(e) => { e.stopPropagation(); onJump(m.key); }}
+        className={clsx("cursor-pointer rounded-[2px] px-0.5 text-inherit underline decoration-2 underline-offset-2", CMP_STYLE[m.type],
+          hot === m.key && "outline outline-2 outline-offset-1 outline-[var(--accent)]")}>
+        {displayText(text.slice(m.start, m.end))}
+        {m.type === "only" && <sup className="ml-0.5 font-sans text-[9px] font-semibold uppercase text-accent">not in {other}</sup>}
+      </mark>,
+    );
+    at = m.end;
+  }
+  parts.push(displayText(text.slice(at)));
+  return <>{parts}</>;
+}
+
 function CompareView({ d, other }: { d: Workspace; other: Lang }) {
   const right = d.other_passages[other] ?? [];
+  const marks = d.compare?.[other];
+  const [hot, setHot] = useState<string | null>(null);
+  const counts = { differ: 0, only: 0, wording: 0 };
+  for (const m of [...(marks?.[d.lang] ?? []), ...(marks?.[other] ?? [])]) counts[m.type]++;
+  counts.differ /= 2; counts.wording /= 2;
   const otherArt = d.articles.find((a) => a.lang === other);
   const [hover, setHover] = useState<{ side: "l" | "r"; idx: number } | null>(null);
   const rightBox = useRef<HTMLDivElement>(null);
@@ -504,9 +544,22 @@ function CompareView({ d, other }: { d: Workspace; other: Lang }) {
     target?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
+  const jumpMark = (fromSide: "l" | "r", key: string) => {
+    const box = fromSide === "l" ? rightBox.current : leftBox.current;
+    box?.querySelector<HTMLElement>(`[data-key="${CSS.escape(key)}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   return (
     <div className="grid grid-cols-2 gap-4">
+      <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-2">
+        <span className="flex items-center gap-1.5"><span className={clsx("inline-block h-3 w-5 rounded-sm", CMP_STYLE.differ)} /> {counts.differ} facts that differ (both sides)</span>
+        <span className="flex items-center gap-1.5"><span className={clsx("inline-block h-3 w-5 rounded-sm", CMP_STYLE.only)} /> {counts.only} facts stated on one side only</span>
+        <span className="flex items-center gap-1.5"><span className={clsx("inline-block h-3 w-5 rounded-sm", CMP_STYLE.wording)} /> {counts.wording} wording differences</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-1 rounded-sm bg-[color-mix(in_oklab,var(--accent)_45%,transparent)]" /> passage with no equivalent</span>
+        {!marks && <span className="text-ink-3">Facts and wording appear once the editions are compared.</span>}
+      </div>
       {([["l", d.article, d.passages], ["r", otherArt, right]] as const).map(([side, art, ps]) => {
+        const sideMarks = marks?.[art.lang] ?? [];
         let prevTop: string | null = null;
         return (
           <div key={side} ref={side === "l" ? leftBox : rightBox} className="h-[calc(100vh-220px)] overflow-y-auto rounded-lg border border-line bg-surface-1 px-6 py-4 shadow-sm">
@@ -534,7 +587,8 @@ function CompareView({ d, other }: { d: Workspace; other: Lang }) {
                       isLinked(side, p) ? "bg-accent-soft" : "hover:bg-surface-2",
                       only && "border-l-4 border-[color-mix(in_oklab,var(--accent)_45%,transparent)]")}>
                     {only && <span className="mb-0.5 block font-sans text-[10.5px] font-semibold uppercase tracking-wide text-accent">Only in {LANG_NAME[art.lang]}</span>}
-                    {displayText(p.text)}
+                    <CompareText text={p.text} marks={sideMarks.filter((m) => m.chunk_id === p.chunk_id)} lang={art.lang}
+                      other={side === "l" ? other : d.lang} hot={hot} setHot={setHot} onJump={(k) => jumpMark(side, k)} />
                   </p>
                 </Fragment>
               );
@@ -542,7 +596,7 @@ function CompareView({ d, other }: { d: Workspace; other: Lang }) {
           </div>
         );
       })}
-      <p className="col-span-2 flex items-center gap-1.5 text-xs text-ink-3"><CircleCheck className="size-3.5" /> Hover a passage to see its counterpart; click to scroll the other column to it. Passages marked “Only in” have no equivalent in the other edition (vector distance above {d.covered}).</p>
+      <p className="col-span-2 flex items-center gap-1.5 text-xs text-ink-3"><CircleCheck className="size-3.5" /> Hover a highlight or a passage to see its counterpart; click to scroll the other column to it. Passages marked “Only in” have no equivalent in the other edition (vector distance above {d.covered}).</p>
     </div>
   );
 }

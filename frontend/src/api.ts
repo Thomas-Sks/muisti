@@ -350,6 +350,11 @@ export interface Workspace {
   passages: WsPassage[]; issues: WsIssue[]; status: Record<string, { status: IssueStatus; note: string | null }>;
   pending: { facts: boolean; wording: boolean; contradictions: boolean; summaries: boolean };
   other_passages: Partial<Record<Lang, WsOtherPassage[]>>; covered: number;
+  compare?: Partial<Record<Lang, Partial<Record<Lang, CompareMark[]>>>>;
+}
+export interface CompareMark {
+  chunk_id: number; start: number; end: number; key: string; type: "differ" | "only" | "wording";
+  title: string; value: string | null; vs: string | null;
 }
 export const wapi6 = {
   workspace: (qid: string, lang: Lang) => req<Workspace>(`/api/topic/${qid}/workspace?lang=${lang}`),
