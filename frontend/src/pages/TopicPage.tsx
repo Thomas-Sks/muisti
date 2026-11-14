@@ -15,9 +15,10 @@ import { attribution, mineFirst, talkNote, useEditingLang, wiki } from "../wiki"
 import TimeMachinePage from "./TimeMachinePage";
 import { WarDetail } from "./RadarPage";
 import RelatedMap from "../components/RelatedMap";
+import WorkspaceView from "../components/Workspace";
 
 const LANGS: Lang[] = ["fi", "sv", "en"];
-type Tab = "summary" | "facts" | "wording" | "missing" | "related" | "history";
+type Tab = "article" | "summary" | "facts" | "wording" | "missing" | "related" | "history";
 type Arts = Partial<Record<Lang, TopicOverview["articles"][number]>>;
 
 const KIND_LABEL: Record<FramingDiff["kind"], string> = {
@@ -35,8 +36,10 @@ export default function TopicPage() {
   const { qid = "" } = useParams();
   const valid = /^Q\d{1,18}$/.test(qid);
   const [params, setParams] = useSearchParams();
-  const tab: Tab = (["summary", "facts", "wording", "missing", "related", "history"] as const).find((t) => t === params.get("tab")) ?? "summary";
-  const setTab = (t: Tab) => setParams({ tab: t }, { replace: true });
+  const tab: Tab = (["article", "summary", "facts", "wording", "missing", "related", "history"] as const).find((t) => t === params.get("tab")) ?? "article";
+  const compare = (["fi", "sv", "en"] as const).find((l) => l === params.get("compare")) ?? null;
+  const setCompare = (l: Lang | null) => setParams((p) => { const n = new URLSearchParams(p); if (l) n.set("compare", l); else n.delete("compare"); n.set("tab", "article"); return n; }, { replace: true });
+  const setTab = (t: Tab) => setParams((p) => { const n = new URLSearchParams(p); n.set("tab", t); return n; }, { replace: true });
   const topic = useQuery({ queryKey: ["topic", qid], queryFn: () => wapi.topic(qid), enabled: valid, retry: false });
   const available = (topic.data?.articles ?? []).map((a) => a.lang);
   const [mine, setMine] = useEditingLang(available);
@@ -76,41 +79,37 @@ export default function TopicPage() {
             </div>
           )}
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
           {cards.map((l) => {
             const a = arts[l];
-            return (
-              <div key={l} className={clsx("rounded-lg border bg-surface-1 px-3.5 py-3 shadow-sm", l === mine && a ? "border-accent ring-2 ring-[var(--accent-soft)]" : "border-line", !a && "opacity-60")}>
-                <div className="flex items-center gap-2">
-                  <LangBadge lang={l} />
-                  {l === mine && a && <span className="text-[11px] font-semibold uppercase tracking-wide text-accent">To improve</span>}
-                  {a && <span className="tabular ml-auto text-xs text-ink-3">{nf.format(Math.round(a.len / 1000))} kB</span>}
-                </div>
-                {a ? <>
-                  <div className="mt-1.5 truncate text-[15px] font-semibold text-ink">{a.title}</div>
-                  <div className="text-xs text-ink-3">{a.passages} passages · last edited {fmtDate(a.date_modified)}</div>
-                  <div className="mt-2"><ArticleLinks links={[
-                    { label: "Read", href: wiki.read(l, a.title) }, { label: "Edit", href: wiki.edit(l, a.title) },
-                    { label: "History", href: wiki.history(l, a.title) }, { label: "Talk", href: wiki.talk(l, a.title) },
-                  ]} /></div>
-                </> : <div className="mt-1.5 text-sm text-ink-3">No {LANG_NAME[l]} article on this topic.</div>}
-              </div>
-            );
+            return a ? (
+              <span key={l} className={clsx("inline-flex items-center gap-1.5 text-sm", l === mine ? "font-semibold text-ink" : "text-ink-2")}>
+                <LangBadge lang={l} size="xs" />{a.title}
+                <span className="tabular text-xs font-normal text-ink-3">{nf.format(Math.round(a.len / 1000))} kB</span>
+                <a href={wiki.edit(l, a.title)} target="_blank" rel="noreferrer" className="text-xs font-medium text-accent hover:underline">edit</a>
+              </span>
+            ) : <span key={l} className="inline-flex items-center gap-1.5 text-sm text-ink-3"><LangBadge lang={l} size="xs" />no article</span>;
           })}
+          {comparable && (
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-xs font-semibold text-ink-2">Compare with</span>
+              <Segmented<string> label="Compare with" value={compare ?? "off"} onChange={(v) => setCompare(v === "off" ? null : v as Lang)}
+                options={[{ value: "off", label: "Off" }, ...t.articles.filter((x) => x.lang !== mine).map((x) => ({ value: x.lang, label: <span className="inline-flex items-center gap-1.5"><LangBadge lang={x.lang} size="xs" />{LANG_NAME[x.lang]}</span> }))]} />
+            </div>
+          )}
         </div>
       </header>
 
       <Tabs<Tab> value={tab} onChange={setTab} tabs={[
-        { value: "summary", label: "To review" },
-        { value: "facts", label: "Facts", count: fd?.facts?.length ?? null, disabled: !comparable },
-        { value: "wording", label: "Wording", count: wd?.differences?.length ?? null, disabled: !comparable },
-        { value: "missing", label: `Missing from ${LANG_NAME[mine]}`, disabled: !comparable },
+        { value: "article", label: `${LANG_NAME[mine]} article` },
+        { value: "facts", label: "Facts table", count: fd?.facts?.length ?? null, disabled: !comparable },
         { value: "related", label: "Related articles", disabled: !mapArt },
         { value: "history", label: "History", disabled: !arts.fi || !t.history },
       ]} />
 
       {!comparable && <Message>This topic exists in one language only, so there is nothing to compare. Its history is available if it is a Finnish article.</Message>}
 
+      {tab === "article" && <WorkspaceView qid={qid} lang={mine} compare={compare && compare !== mine ? compare : null} />}
       {tab === "summary" && comparable && (
         <Summary mine={mine} arts={arts} facts={fd} framing={wd} onTab={setTab} history={t.history}
           loading={facts.isFetching || framing.isFetching}

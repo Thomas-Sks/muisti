@@ -332,3 +332,27 @@ export interface Stale {
 export const wapi5 = {
   stale: (qid: string) => req<Stale>(`/api/topic/${qid}/stale`),
 };
+
+// ── Editor workspace ──
+export type IssueType = "fact" | "wording" | "contradiction" | "missing";
+export type IssueStatus = "open" | "fixed" | "dismissed";
+export interface WsPassage { chunk_id: number; chunk_idx: number; section: string | null; text: string }
+export interface WsOtherPassage extends WsPassage { match_idx: number | null; distance: number | null }
+export interface WsIssue {
+  id: string; type: IssueType; severity: "high" | "medium" | "low"; title: string; status_label: string;
+  provenance: "sql" | "claude" | "sql+claude" | "claude+sql"; chunk_id: number | null; start: number | null; end: number | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  detail: any;
+}
+export interface WsArticle { lang: Lang; page_id: number; title: string; rev_id: number }
+export interface Workspace {
+  wikidata_id: string; lang: Lang; article: WsArticle; articles: WsArticle[];
+  passages: WsPassage[]; issues: WsIssue[]; status: Record<string, { status: IssueStatus; note: string | null }>;
+  pending: { facts: boolean; wording: boolean; contradictions: boolean; summaries: boolean };
+  other_passages: Partial<Record<Lang, WsOtherPassage[]>>; covered: number;
+}
+export const wapi6 = {
+  workspace: (qid: string, lang: Lang) => req<Workspace>(`/api/topic/${qid}/workspace?lang=${lang}`),
+  setStatus: (qid: string, issueId: string, lang: Lang, status: IssueStatus) =>
+    req<{ ok: boolean }>(`/api/topic/${qid}/issues/${encodeURIComponent(issueId)}`, { method: "PUT", body: JSON.stringify({ lang, status }) }),
+};
