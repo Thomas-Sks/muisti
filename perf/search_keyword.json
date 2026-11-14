@@ -1,0 +1,195 @@
+{
+  "query_optimization": {
+    "r_total_time_ms": 5.794650893
+  },
+  "query_block": {
+    "select_id": 1,
+    "cost": 0.018207467,
+    "r_loops": 1,
+    "r_total_time_ms": 20.15377394,
+    "nested_loop": [
+      {
+        "read_sorted_file": {
+          "r_rows": 40,
+          "filesort": {
+            "sort_key": "1.0 / (60 + k.r) desc",
+            "r_loops": 1,
+            "r_total_time_ms": 0.022874919,
+            "r_used_priority_queue": false,
+            "r_output_rows": 100,
+            "r_buffer_size": "2KiB",
+            "r_sort_mode": "sort_key,rowid",
+            "table": {
+              "table_name": "<derived2>",
+              "access_type": "ALL",
+              "loops": 1,
+              "r_loops": 1,
+              "rows": 2,
+              "r_rows": 100,
+              "cost": 0.010089369,
+              "r_table_time_ms": 0.003836236,
+              "r_other_time_ms": 0.036585741,
+              "filtered": 100,
+              "r_total_filtered": 100,
+              "attached_condition": "k.chunk_id is not null",
+              "r_filtered": 100,
+              "materialized": {
+                "query_block": {
+                  "select_id": 2,
+                  "cost": 0.010089369,
+                  "r_loops": 1,
+                  "r_total_time_ms": 19.92342154,
+                  "window_functions_computation": {
+                    "sorts": [
+                      {
+                        "filesort": {
+                          "sort_key": "y.s desc",
+                          "r_loops": 1,
+                          "r_total_time_ms": 0.010544131,
+                          "r_used_priority_queue": false,
+                          "r_output_rows": 100,
+                          "r_buffer_size": "2KiB",
+                          "r_sort_mode": "sort_key,rowid"
+                        }
+                      }
+                    ],
+                    "temporary_table": {
+                      "nested_loop": [
+                        {
+                          "table": {
+                            "table_name": "<derived3>",
+                            "access_type": "ALL",
+                            "loops": 1,
+                            "r_loops": 1,
+                            "rows": 2,
+                            "r_rows": 100,
+                            "cost": 0.010089369,
+                            "r_table_time_ms": 0.003736286,
+                            "r_other_time_ms": 0.375736412,
+                            "filtered": 100,
+                            "r_total_filtered": 100,
+                            "r_filtered": 100,
+                            "materialized": {
+                              "query_block": {
+                                "select_id": 3,
+                                "cost": 9.287e-05,
+                                "r_loops": 1,
+                                "r_total_time_ms": 18.95835059,
+                                "filesort": {
+                                  "sort_key": "(match chunk.text_stem against ('end ended peac peace treati treaty war wint winter' in boolean mode)) desc",
+                                  "r_loops": 1,
+                                  "r_total_time_ms": 0.269075634,
+                                  "r_limit": 100,
+                                  "r_used_priority_queue": true,
+                                  "r_output_rows": 101,
+                                  "r_sort_mode": "sort_key,rowid",
+                                  "temporary_table": {
+                                    "nested_loop": [
+                                      {
+                                        "table": {
+                                          "table_name": "chunk",
+                                          "access_type": "fulltext",
+                                          "possible_keys": [
+                                            "ft_stem"
+                                          ],
+                                          "key": "ft_stem",
+                                          "key_length": "0",
+                                          "used_key_parts": [
+                                            "text_stem"
+                                          ],
+                                          "loops": 1,
+                                          "r_loops": 1,
+                                          "rows": 1,
+                                          "r_rows": 8327,
+                                          "cost": 9.287e-05,
+                                          "r_engine_stats": {
+                                            "pages_accessed": 41644
+                                          },
+                                          "filtered": 100,
+                                          "r_total_filtered": 100,
+                                          "attached_condition": "(match chunk.text_stem against ('end ended peac peace treati treaty war wint winter' in boolean mode))",
+                                          "r_filtered": 100
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "table": {
+          "table_name": "c",
+          "access_type": "eq_ref",
+          "possible_keys": [
+            "PRIMARY",
+            "page_chunk"
+          ],
+          "key": "PRIMARY",
+          "key_length": "4",
+          "used_key_parts": [
+            "chunk_id"
+          ],
+          "ref": [
+            "k.chunk_id"
+          ],
+          "loops": 2,
+          "r_loops": 40,
+          "rows": 1,
+          "r_rows": 1,
+          "cost": 0.00342728,
+          "r_table_time_ms": 0.086397004,
+          "r_other_time_ms": 0.00346895,
+          "r_engine_stats": {
+            "pages_accessed": 123
+          },
+          "filtered": 100,
+          "r_total_filtered": 100,
+          "r_filtered": 100
+        }
+      },
+      {
+        "table": {
+          "table_name": "a",
+          "access_type": "eq_ref",
+          "possible_keys": [
+            "PRIMARY"
+          ],
+          "key": "PRIMARY",
+          "key_length": "12",
+          "used_key_parts": [
+            "lang",
+            "page_id"
+          ],
+          "ref": [
+            "muisti.c.lang",
+            "muisti.c.page_id"
+          ],
+          "loops": 2,
+          "r_loops": 40,
+          "rows": 1,
+          "r_rows": 1,
+          "cost": 0.00342728,
+          "r_table_time_ms": 0.083424995,
+          "r_other_time_ms": 0.019077619,
+          "r_engine_stats": {
+            "pages_accessed": 133
+          },
+          "filtered": 100,
+          "r_total_filtered": 100,
+          "r_filtered": 100
+        }
+      }
+    ]
+  }
+}

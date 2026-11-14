@@ -1,0 +1,183 @@
+{
+  "query_optimization": {
+    "r_total_time_ms": 0.217115243
+  },
+  "query_block": {
+    "select_id": 1,
+    "cost": 0.35719646,
+    "r_loops": 1,
+    "r_total_time_ms": 12.22500031,
+    "nested_loop": [
+      {
+        "read_sorted_file": {
+          "r_rows": 40,
+          "filesort": {
+            "sort_key": "1.0 / (60 + v.r) desc",
+            "r_loops": 1,
+            "r_total_time_ms": 0.025661479,
+            "r_used_priority_queue": false,
+            "r_output_rows": 100,
+            "r_buffer_size": "2KiB",
+            "r_sort_mode": "sort_key,rowid",
+            "table": {
+              "table_name": "<derived2>",
+              "access_type": "ALL",
+              "loops": 1,
+              "r_loops": 1,
+              "rows": 100,
+              "r_rows": 100,
+              "cost": 0.01446846,
+              "r_table_time_ms": 0.004934483,
+              "r_other_time_ms": 0.043225798,
+              "filtered": 100,
+              "r_total_filtered": 100,
+              "attached_condition": "v.chunk_id is not null",
+              "r_filtered": 100,
+              "materialized": {
+                "query_block": {
+                  "select_id": 2,
+                  "cost": 0.01446846,
+                  "r_loops": 1,
+                  "r_total_time_ms": 11.84795411,
+                  "window_functions_computation": {
+                    "sorts": [
+                      {
+                        "filesort": {
+                          "sort_key": "x.d",
+                          "r_loops": 1,
+                          "r_total_time_ms": 0.01321067,
+                          "r_used_priority_queue": false,
+                          "r_output_rows": 100,
+                          "r_buffer_size": "2KiB",
+                          "r_sort_mode": "sort_key,rowid"
+                        }
+                      }
+                    ],
+                    "temporary_table": {
+                      "nested_loop": [
+                        {
+                          "table": {
+                            "table_name": "<derived3>",
+                            "access_type": "ALL",
+                            "loops": 1,
+                            "r_loops": 1,
+                            "rows": 100,
+                            "r_rows": 100,
+                            "cost": 0.01446846,
+                            "r_table_time_ms": 0.005620084,
+                            "r_other_time_ms": 0.029709256,
+                            "filtered": 100,
+                            "r_total_filtered": 100,
+                            "r_filtered": 100,
+                            "materialized": {
+                              "query_block": {
+                                "select_id": 3,
+                                "cost": 55.9625162,
+                                "r_loops": 1,
+                                "r_total_time_ms": 11.77556417,
+                                "nested_loop": [
+                                  {
+                                    "table": {
+                                      "table_name": "chunk_vector",
+                                      "access_type": "index",
+                                      "key": "embedding",
+                                      "key_length": "4098",
+                                      "used_key_parts": [
+                                        "embedding"
+                                      ],
+                                      "loops": 1,
+                                      "r_loops": 1,
+                                      "rows": 54633,
+                                      "r_rows": 100,
+                                      "cost": 55.9625162,
+                                      "r_table_time_ms": 0.333650607,
+                                      "r_other_time_ms": 9.473207391,
+                                      "r_engine_stats": {
+                                        "pages_accessed": 378
+                                      },
+                                      "filtered": 100,
+                                      "r_total_filtered": 100,
+                                      "r_filtered": 100
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "table": {
+          "table_name": "c",
+          "access_type": "eq_ref",
+          "possible_keys": [
+            "PRIMARY",
+            "page_chunk"
+          ],
+          "key": "PRIMARY",
+          "key_length": "4",
+          "used_key_parts": [
+            "chunk_id"
+          ],
+          "ref": [
+            "v.chunk_id"
+          ],
+          "loops": 100,
+          "r_loops": 40,
+          "rows": 1,
+          "r_rows": 1,
+          "cost": 0.171364,
+          "r_table_time_ms": 0.139454437,
+          "r_other_time_ms": 0.007054709,
+          "r_engine_stats": {
+            "pages_accessed": 123
+          },
+          "filtered": 100,
+          "r_total_filtered": 100,
+          "r_filtered": 100
+        }
+      },
+      {
+        "table": {
+          "table_name": "a",
+          "access_type": "eq_ref",
+          "possible_keys": [
+            "PRIMARY"
+          ],
+          "key": "PRIMARY",
+          "key_length": "12",
+          "used_key_parts": [
+            "lang",
+            "page_id"
+          ],
+          "ref": [
+            "muisti.c.lang",
+            "muisti.c.page_id"
+          ],
+          "loops": 100,
+          "r_loops": 40,
+          "r_table_loops": 39,
+          "rows": 1,
+          "r_rows": 1,
+          "cost": 0.171364,
+          "r_table_time_ms": 0.131462847,
+          "r_other_time_ms": 0.054283728,
+          "r_engine_stats": {
+            "pages_accessed": 127
+          },
+          "filtered": 100,
+          "r_total_filtered": 100,
+          "r_filtered": 100
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+/* Design tokens: values modelled on Wikimedia's Codex design system (WikimediaUI light theme), written by hand
+   so the tool feels native to Wikipedia editors. One accent (progressive blue), neutral greys, hairline borders,
+   2px radius, no shadows. Diff colours follow MediaWiki's diff view (blue = added, yellow = removed / differs). */
+:root {
+  color-scheme: light;
+  --bg: #f8f9fa;                 /* page chrome */
+  --surface-1: #ffffff;          /* content */
+  --surface-2: #f8f9fa;          /* table headers, quiet areas */
+  --surface-3: #eaecf0;          /* interactive neutral */
+  --border: #dadde3;             /* hairlines */
+  --border-strong: #c8ccd1;      /* dividers */
+  --border-input: #a2a9b1;       /* inputs */
+  --text-primary: #202122;
+  --text-emphasized: #101418;
+  --text-secondary: #54595d;
+  --text-muted: #72777d;
+  --accent: #3366cc;             /* progressive */
+  --accent-hover: #3056a9;
+  --accent-soft: #e8eeff;        /* selected row */
+  --destructive: #bf3c2c;
+  --destructive-soft: #ffe9e5;
+  --warning: #886425;
+  --warning-soft: #fdf2d5;
+  --success: #177860;
+  --success-soft: #dff2eb;
+  --diff-added: #a3d3ff;         /* MediaWiki diff: added */
+  --diff-removed: #ffe49c;       /* MediaWiki diff: removed */
+  --mark: #fef6e7;               /* soft highlight inside passages */
+  /* language identity: one soft hue each (text stays dark: colour carries identity, the code carries meaning) */
+  --lang-fi: #2f5fc4; --lang-fi-soft: #eaf0ff;
+  --lang-sv: #b4570f; --lang-sv-soft: #fff1e3;
+  --lang-en: #13795b; --lang-en-soft: #e3f6ee;
+  --hero: linear-gradient(180deg, #eef3ff 0%, #f8f9fa 100%);
+
+  /* chart series (validated palette, kept for charts only) */
+  --series-1: #3366cc;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --seq-100: #e8eeff; --seq-200: #c3d3f5; --seq-300: #8fade9; --seq-400: #5d88dc;
+  --seq-500: #3366cc; --seq-600: #284f9e; --seq-700: #1b3770;
+  --grid: #eaecf0;
+  --ins-bg: #dff2eb; --ins-text: #0d5b49;
+  --del-bg: #ffe9e5; --del-text: #8b2a1d;
+  --critical: #bf3c2c;
+  --code-bg: #f8f9fa;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-line-input: var(--border-input);
+  --color-ink: var(--text-primary);
+  --color-ink-strong: var(--text-emphasized);
+  --color-ink-2: var(--text-secondary);
+  --color-ink-3: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-diff-added: var(--diff-added);
+  --color-diff-removed: var(--diff-removed);
+  --color-fi: var(--lang-fi); --color-fi-soft: var(--lang-fi-soft);
+  --color-sv: var(--lang-sv); --color-sv-soft: var(--lang-sv-soft);
+  --color-en: var(--lang-en); --color-en-soft: var(--lang-en-soft);
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Linux Libertine", "Source Serif 4", "Georgia", "Times", serif;
+  --font-mono: Menlo, Consolas, "Liberation Mono", "Fira Code", monospace;
+  /* Modern but restrained: small radii, hairline borders, a soft shadow on raised panels only */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow: 0 1px 3px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+@layer base {
+  html, body { background: var(--bg); color: var(--text-primary); }
+  body { font-family: var(--font-sans); font-size: 14px; line-height: 1.43; -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--accent-soft); }
+  a { color: inherit; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .serif { font-family: var(--font-serif); }
+  mark.hit { background: var(--mark); color: inherit; border-bottom: 1px solid #e0c58a; padding: 0 1px; }
+  :where(a, button, select, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  input:focus-visible, textarea:focus-visible { outline: none; }
+}

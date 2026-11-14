@@ -1,0 +1,26 @@
+# MariaDB 12.3 settings for Muisti (see .claude/skills/mariadb-wiki-sql/SKILL.md §7).
+# Host: 15 GB RAM laptop shared with a desktop + GPU embedding job -> conservative sizes.
+[mariadb]
+character_set_server   = utf8mb4
+collation_server       = utf8mb4_uca1400_ai_ci
+default_time_zone      = '+00:00'
+
+innodb_buffer_pool_size = 3G
+innodb_log_file_size    = 1G
+innodb_log_buffer_size  = 64M
+innodb_flush_log_at_trx_commit = 1
+innodb_sort_buffer_size = 64M
+
+# Full-text: Finnish lemmas, no English stopword list
+innodb_ft_min_token_size  = 3
+innodb_ft_enable_stopword = OFF
+innodb_ft_sort_pll_degree = 4
+
+# Vector index cache: default 16M is far too small (all vectors must fit)
+mhnsw_max_cache_size = 1536M
+
+max_allowed_packet = 256M
+performance_schema = ON
+log_slow_query          = 1
+log_slow_query_time     = 0.5
+log_slow_verbosity      = query_plan,explain,engine

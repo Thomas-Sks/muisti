@@ -1,0 +1,50 @@
+{
+  "query_optimization": {
+    "r_total_time_ms": 7.030757943
+  },
+  "query_block": {
+    "select_id": 1,
+    "cost": 9.287e-05,
+    "r_loops": 1,
+    "r_total_time_ms": 41.37822753,
+    "filesort": {
+      "sort_key": "(match article_l.title,article_l.text_stem against ('end ended peac peace treati treaty war wint winter' in boolean mode)) desc",
+      "r_loops": 1,
+      "r_total_time_ms": 1.116474036,
+      "r_limit": 20,
+      "r_used_priority_queue": true,
+      "r_output_rows": 21,
+      "r_sort_mode": "sort_key,rowid",
+      "temporary_table": {
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "article_l",
+              "access_type": "fulltext",
+              "possible_keys": [
+                "ft_l"
+              ],
+              "key": "ft_l",
+              "key_length": "0",
+              "used_key_parts": [
+                "title"
+              ],
+              "loops": 1,
+              "r_loops": 1,
+              "rows": 1,
+              "r_rows": 11253,
+              "cost": 9.287e-05,
+              "r_engine_stats": {
+                "pages_accessed": 60414
+              },
+              "filtered": 100,
+              "r_total_filtered": 100,
+              "attached_condition": "(match article_l.title,article_l.text_stem against ('end ended peac peace treati treaty war wint winter' in boolean mode))",
+              "r_filtered": 100
+            }
+          }
+        ]
+      }
+    }
+  }
+}

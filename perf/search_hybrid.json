@@ -1,0 +1,371 @@
+{
+  "query_optimization": {
+    "r_total_time_ms": 6.624175894
+  },
+  "query_block": {
+    "select_id": 1,
+    "cost": 0.364140389,
+    "r_loops": 1,
+    "r_total_time_ms": 36.92549629,
+    "nested_loop": [
+      {
+        "read_sorted_file": {
+          "r_rows": 40,
+          "filesort": {
+            "sort_key": "f.score desc",
+            "r_loops": 1,
+            "r_total_time_ms": 0.031308056,
+            "r_used_priority_queue": false,
+            "r_output_rows": 181,
+            "r_buffer_size": "5KiB",
+            "r_sort_mode": "sort_key,rowid",
+            "table": {
+              "table_name": "<derived6>",
+              "access_type": "ALL",
+              "loops": 1,
+              "r_loops": 1,
+              "rows": 102,
+              "r_rows": 181,
+              "cost": 0.014557829,
+              "r_table_time_ms": 0.007641564,
+              "r_other_time_ms": 0.066486468,
+              "filtered": 100,
+              "r_total_filtered": 100,
+              "attached_condition": "f.chunk_id is not null",
+              "r_filtered": 100,
+              "materialized": {
+                "query_block": {
+                  "select_id": 6,
+                  "cost": 0.080405593,
+                  "r_loops": 1,
+                  "r_total_time_ms": 36.65192652,
+                  "filesort": {
+                    "sort_key": "u.chunk_id",
+                    "r_loops": 1,
+                    "r_total_time_ms": 0.030616434,
+                    "r_used_priority_queue": false,
+                    "r_output_rows": 181,
+                    "r_buffer_size": "3KiB",
+                    "r_sort_mode": "sort_key,rowid",
+                    "temporary_table": {
+                      "nested_loop": [
+                        {
+                          "table": {
+                            "table_name": "<derived7>",
+                            "access_type": "ALL",
+                            "loops": 1,
+                            "r_loops": 1,
+                            "rows": 102,
+                            "r_rows": 200,
+                            "cost": 0.014557829,
+                            "r_table_time_ms": 0.00758898,
+                            "r_other_time_ms": 0.114782023,
+                            "filtered": 100,
+                            "r_total_filtered": 100,
+                            "r_filtered": 100,
+                            "materialized": {
+                              "query_block": {
+                                "union_result": {
+                                  "query_specifications": [
+                                    {
+                                      "query_block": {
+                                        "select_id": 7,
+                                        "cost": 0.01446846,
+                                        "r_loops": 1,
+                                        "r_total_time_ms": 13.29397719,
+                                        "nested_loop": [
+                                          {
+                                            "table": {
+                                              "table_name": "<derived2>",
+                                              "access_type": "ALL",
+                                              "loops": 1,
+                                              "r_loops": 1,
+                                              "rows": 100,
+                                              "r_rows": 100,
+                                              "cost": 0.01446846,
+                                              "r_table_time_ms": 0.004756259,
+                                              "r_other_time_ms": 0.048256618,
+                                              "filtered": 100,
+                                              "r_total_filtered": 100,
+                                              "r_filtered": 100,
+                                              "materialized": {
+                                                "query_block": {
+                                                  "select_id": 2,
+                                                  "cost": 0.01446846,
+                                                  "r_loops": 1,
+                                                  "r_total_time_ms": 13.25558151,
+                                                  "window_functions_computation": {
+                                                    "sorts": [
+                                                      {
+                                                        "filesort": {
+                                                          "sort_key": "x.d",
+                                                          "r_loops": 1,
+                                                          "r_total_time_ms": 0.018088956,
+                                                          "r_used_priority_queue": false,
+                                                          "r_output_rows": 100,
+                                                          "r_buffer_size": "2KiB",
+                                                          "r_sort_mode": "sort_key,rowid"
+                                                        }
+                                                      }
+                                                    ],
+                                                    "temporary_table": {
+                                                      "nested_loop": [
+                                                        {
+                                                          "table": {
+                                                            "table_name": "<derived3>",
+                                                            "access_type": "ALL",
+                                                            "loops": 1,
+                                                            "r_loops": 1,
+                                                            "rows": 100,
+                                                            "r_rows": 100,
+                                                            "cost": 0.01446846,
+                                                            "r_table_time_ms": 0.007670867,
+                                                            "r_other_time_ms": 0.043879287,
+                                                            "filtered": 100,
+                                                            "r_total_filtered": 100,
+                                                            "r_filtered": 100,
+                                                            "materialized": {
+                                                              "query_block": {
+                                                                "select_id": 3,
+                                                                "cost": 55.9625162,
+                                                                "r_loops": 1,
+                                                                "r_total_time_ms": 13.15360554,
+                                                                "nested_loop": [
+                                                                  {
+                                                                    "table": {
+                                                                      "table_name": "chunk_vector",
+                                                                      "access_type": "index",
+                                                                      "key": "embedding",
+                                                                      "key_length": "4098",
+                                                                      "used_key_parts": [
+                                                                        "embedding"
+                                                                      ],
+                                                                      "loops": 1,
+                                                                      "r_loops": 1,
+                                                                      "rows": 54633,
+                                                                      "r_rows": 100,
+                                                                      "cost": 55.9625162,
+                                                                      "r_table_time_ms": 0.451234443,
+                                                                      "r_other_time_ms": 11.05319889,
+                                                                      "r_engine_stats": {
+                                                                        "pages_accessed": 378
+                                                                      },
+                                                                      "filtered": 100,
+                                                                      "r_total_filtered": 100,
+                                                                      "r_filtered": 100
+                                                                    }
+                                                                  }
+                                                                ]
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "query_block": {
+                                        "select_id": 8,
+                                        "operation": "UNION",
+                                        "cost": 0.010089369,
+                                        "r_loops": 1,
+                                        "r_total_time_ms": 23.16875668,
+                                        "nested_loop": [
+                                          {
+                                            "table": {
+                                              "table_name": "<derived4>",
+                                              "access_type": "ALL",
+                                              "loops": 1,
+                                              "r_loops": 1,
+                                              "rows": 2,
+                                              "r_rows": 100,
+                                              "cost": 0.010089369,
+                                              "r_table_time_ms": 0.00375154,
+                                              "r_other_time_ms": 0.044529163,
+                                              "filtered": 100,
+                                              "r_total_filtered": 100,
+                                              "r_filtered": 100,
+                                              "materialized": {
+                                                "query_block": {
+                                                  "select_id": 4,
+                                                  "cost": 0.010089369,
+                                                  "r_loops": 1,
+                                                  "r_total_time_ms": 23.12674554,
+                                                  "window_functions_computation": {
+                                                    "sorts": [
+                                                      {
+                                                        "filesort": {
+                                                          "sort_key": "y.s desc",
+                                                          "r_loops": 1,
+                                                          "r_total_time_ms": 0.014031947,
+                                                          "r_used_priority_queue": false,
+                                                          "r_output_rows": 100,
+                                                          "r_buffer_size": "2KiB",
+                                                          "r_sort_mode": "sort_key,rowid"
+                                                        }
+                                                      }
+                                                    ],
+                                                    "temporary_table": {
+                                                      "nested_loop": [
+                                                        {
+                                                          "table": {
+                                                            "table_name": "<derived5>",
+                                                            "access_type": "ALL",
+                                                            "loops": 1,
+                                                            "r_loops": 1,
+                                                            "rows": 2,
+                                                            "r_rows": 100,
+                                                            "cost": 0.010089369,
+                                                            "r_table_time_ms": 0.006403227,
+                                                            "r_other_time_ms": 0.467969457,
+                                                            "filtered": 100,
+                                                            "r_total_filtered": 100,
+                                                            "r_filtered": 100,
+                                                            "materialized": {
+                                                              "query_block": {
+                                                                "select_id": 5,
+                                                                "cost": 9.287e-05,
+                                                                "r_loops": 1,
+                                                                "r_total_time_ms": 22.01181049,
+                                                                "filesort": {
+                                                                  "sort_key": "(match chunk.text_stem against ('end ended peac peace treati treaty war wint winter' in boolean mode)) desc",
+                                                                  "r_loops": 1,
+                                                                  "r_total_time_ms": 0.370591592,
+                                                                  "r_limit": 100,
+                                                                  "r_used_priority_queue": true,
+                                                                  "r_output_rows": 101,
+                                                                  "r_sort_mode": "sort_key,rowid",
+                                                                  "temporary_table": {
+                                                                    "nested_loop": [
+                                                                      {
+                                                                        "table": {
+                                                                          "table_name": "chunk",
+                                                                          "access_type": "fulltext",
+                                                                          "possible_keys": [
+                                                                            "ft_stem"
+                                                                          ],
+                                                                          "key": "ft_stem",
+                                                                          "key_length": "0",
+                                                                          "used_key_parts": [
+                                                                            "text_stem"
+                                                                          ],
+                                                                          "loops": 1,
+                                                                          "r_loops": 1,
+                                                                          "rows": 1,
+                                                                          "r_rows": 8327,
+                                                                          "cost": 9.287e-05,
+                                                                          "r_engine_stats": {
+                                                                            "pages_accessed": 41644
+                                                                          },
+                                                                          "filtered": 100,
+                                                                          "r_total_filtered": 100,
+                                                                          "attached_condition": "(match chunk.text_stem against ('end ended peac peace treati treaty war wint winter' in boolean mode))",
+                                                                          "r_filtered": 100
+                                                                        }
+                                                                      }
+                                                                    ]
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "table": {
+          "table_name": "c",
+          "access_type": "eq_ref",
+          "possible_keys": [
+            "PRIMARY",
+            "page_chunk"
+          ],
+          "key": "PRIMARY",
+          "key_length": "4",
+          "used_key_parts": [
+            "chunk_id"
+          ],
+          "ref": [
+            "f.chunk_id"
+          ],
+          "loops": 102,
+          "r_loops": 40,
+          "rows": 1,
+          "r_rows": 1,
+          "cost": 0.17479128,
+          "r_table_time_ms": 0.102278228,
+          "r_other_time_ms": 0.005288924,
+          "r_engine_stats": {
+            "pages_accessed": 123
+          },
+          "filtered": 100,
+          "r_total_filtered": 100,
+          "r_filtered": 100
+        }
+      },
+      {
+        "table": {
+          "table_name": "a",
+          "access_type": "eq_ref",
+          "possible_keys": [
+            "PRIMARY"
+          ],
+          "key": "PRIMARY",
+          "key_length": "12",
+          "used_key_parts": [
+            "lang",
+            "page_id"
+          ],
+          "ref": [
+            "muisti.c.lang",
+            "muisti.c.page_id"
+          ],
+          "loops": 102,
+          "r_loops": 40,
+          "r_table_loops": 38,
+          "rows": 1,
+          "r_rows": 1,
+          "cost": 0.17479128,
+          "r_table_time_ms": 0.106509047,
+          "r_other_time_ms": 0.012780363,
+          "r_engine_stats": {
+            "pages_accessed": 127
+          },
+          "filtered": 100,
+          "r_total_filtered": 100,
+          "r_filtered": 100
+        }
+      }
+    ]
+  }
+}

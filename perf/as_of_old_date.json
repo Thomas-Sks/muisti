@@ -1,0 +1,71 @@
+{
+  "query_optimization": {
+    "r_total_time_ms": 20.80250813
+  },
+  "query_block": {
+    "select_id": 1,
+    "cost": 0.11768168,
+    "r_loops": 1,
+    "r_total_time_ms": 0.14883128,
+    "nested_loop": [
+      {
+        "table": {
+          "table_name": "article_history",
+          "partitions": [
+            "p3",
+            "p4",
+            "p5",
+            "p6",
+            "p7",
+            "p8",
+            "p9",
+            "p10",
+            "p11",
+            "p12",
+            "p13",
+            "p14",
+            "p15",
+            "p16",
+            "p17",
+            "p18",
+            "p19",
+            "p20",
+            "p21",
+            "p22",
+            "p23",
+            "p24",
+            "pn"
+          ],
+          "partitions_index_scan_method": "merge_ordered_scans",
+          "access_type": "range",
+          "possible_keys": [
+            "PRIMARY",
+            "timeline"
+          ],
+          "key": "timeline",
+          "key_length": "11",
+          "used_key_parts": [
+            "page_id",
+            "row_start"
+          ],
+          "loops": 1,
+          "r_loops": 1,
+          "rows": 34,
+          "r_index_rows": 12,
+          "r_rows": 1,
+          "cost": 0.11768168,
+          "r_engine_stats": {
+            "pages_accessed": 211,
+            "pages_read_count": 78,
+            "pages_read_time_ms": 19.8722752
+          },
+          "filtered": 100,
+          "r_total_filtered": 8.333333333,
+          "index_condition": "article_history.page_id = 1150 and article_history.row_end > TIMESTAMP/*WITH LOCAL TIME ZONE*/'2005-06-01 00:00:00' and article_history.row_start <= TIMESTAMP/*WITH LOCAL TIME ZONE*/'2005-06-01 00:00:00'",
+          "r_icp_filtered": 8.333333333,
+          "r_filtered": 100
+        }
+      }
+    ]
+  }
+}

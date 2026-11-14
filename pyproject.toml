@@ -1,0 +1,32 @@
+[project]
+name = "muisti"
+version = "0.1.0"
+description = "Wikipedia that remembers: cross-language cited search and time travel on MariaDB"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "pymysql>=1.1",
+  "pyarrow>=18",
+  "numpy>=2.0",
+  "torch>=2.5",
+  "sentence-transformers>=3.3",
+  "mwparserfromhell>=0.6",
+  "pydantic>=2.9",
+  "pytest>=8.3",
+  "httpx>=0.27",
+  "snowballstemmer>=3.1.1",
+  "pystemmer>=3.1.0",
+  "anthropic>=2.8.0",
+]
+
+[tool.uv]
+package = false
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu124" }
