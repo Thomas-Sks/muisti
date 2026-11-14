@@ -66,48 +66,35 @@ export default function TopicPage() {
   const cards = [...mineFirst(mine, available), ...LANGS.filter((l) => !available.includes(l))];
 
   return (
-    <div className="space-y-5">
-      <header className="rounded-xl border border-line px-5 pb-5 pt-4 shadow-sm" style={{ background: "var(--hero)" }}>
-        <div className="text-xs text-ink-3"><Link to="/" className="text-accent hover:underline">Topics</Link><span className="mx-1.5">/</span>{title}</div>
-        <div className="mt-1 flex flex-wrap items-end justify-between gap-4">
-          <h1 className="serif text-[30px] leading-tight text-ink-strong">{title}</h1>
-          {comparable && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-ink-2">Article to improve</span>
-              <Segmented<Lang> label="Article to improve" value={mine} onChange={setMine}
-                options={t.articles.map((a) => ({ value: a.lang, label: <span className="inline-flex items-center gap-1.5"><LangBadge lang={a.lang} size="xs" />{LANG_NAME[a.lang]}</span> }))} />
-            </div>
-          )}
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
-          {cards.map((l) => {
-            const a = arts[l];
-            return a ? (
-              <span key={l} className={clsx("inline-flex items-center gap-1.5 text-sm", l === mine ? "font-semibold text-ink" : "text-ink-2")}>
-                <LangBadge lang={l} size="xs" />{a.title}
-                <span className="tabular text-xs font-normal text-ink-3">{nf.format(Math.round(a.len / 1000))} kB</span>
-                <a href={wiki.edit(l, a.title)} target="_blank" rel="noreferrer" className="text-xs font-medium text-accent hover:underline">edit</a>
-              </span>
-            ) : <span key={l} className="inline-flex items-center gap-1.5 text-sm text-ink-3"><LangBadge lang={l} size="xs" />no article</span>;
-          })}
-          {comparable && (
-            <div className="ml-auto flex items-center gap-2">
-              <span className="text-xs font-semibold text-ink-2">Compare with</span>
-              <Segmented<string> label="Compare with" value={compare ?? "off"} onChange={(v) => setCompare(v === "off" ? null : v as Lang)}
-                options={[{ value: "off", label: "Off" }, ...t.articles.filter((x) => x.lang !== mine).map((x) => ({ value: x.lang, label: <span className="inline-flex items-center gap-1.5"><LangBadge lang={x.lang} size="xs" />{LANG_NAME[x.lang]}</span> }))]} />
-            </div>
-          )}
-        </div>
-      </header>
-
-      <Tabs<Tab> value={tab} onChange={setTab} tabs={[
-        { value: "article", label: `${LANG_NAME[mine]} article` },
-        { value: "facts", label: "Facts table", count: fd?.facts?.length ?? null, disabled: !comparable },
-        { value: "related", label: "Related articles", disabled: !mapArt },
-        { value: "history", label: "History", disabled: !arts.fi || !t.history },
-      ]} />
-
-      {!comparable && <Message>This topic exists in one language only, so there is nothing to compare. Its history is available if it is a Finnish article.</Message>}
+    <div>
+      <div className="sticky top-12 z-30 flex h-11 items-center gap-4 border-b border-line bg-surface-1 px-4 sm:px-6">
+        <Link to="/" className="text-xs text-accent hover:underline">Topics</Link>
+        <h1 className="serif truncate text-[17px] text-ink-strong" title={title}>{title}</h1>
+        <nav className="flex h-full items-stretch gap-4 text-[13px]">
+          {([
+            ["article", `${LANG_NAME[mine]} article`, false],
+            ["facts", `Facts table${fd?.facts?.length ? ` ${fd.facts.length}` : ""}`, !comparable],
+            ["related", "Related articles", !mapArt],
+            ["history", "History", !arts.fi || !t.history],
+          ] as [Tab, string, boolean][]).map(([v, label, off]) => (
+            <button key={v} disabled={off} onClick={() => setTab(v)}
+              className={clsx("border-b-2 whitespace-nowrap", tab === v ? "border-accent font-semibold text-ink" : "border-transparent text-ink-2 hover:text-ink", off && "opacity-40")}>
+              {label}
+            </button>
+          ))}
+        </nav>
+        {comparable && (
+          <div className="ml-auto flex items-center gap-3 text-xs">
+            <Pills label="Editing" value={mine} onChange={(v) => setMine(v as Lang)} options={t.articles.map((x) => x.lang)} />
+            <Pills label="Compare" value={compare ?? "off"} onChange={(v) => setCompare(v === "off" ? null : v as Lang)}
+              options={["off", ...t.articles.filter((x) => x.lang !== mine).map((x) => x.lang)]} />
+            {arts[mine] && <a href={wiki.edit(mine, arts[mine]!.title)} target="_blank" rel="noreferrer"
+              className="rounded border border-line px-2 py-1 font-medium text-accent hover:border-accent">Edit on Wikipedia ↗</a>}
+          </div>
+        )}
+      </div>
+      <div className={tab === "article" ? "" : "mx-auto max-w-7xl space-y-4 px-4 py-5 sm:px-6"}>
+      {!comparable && tab !== "article" && <Message>This topic exists in one language only, so there is nothing to compare. Its history is available if it is a Finnish article.</Message>}
 
       {tab === "article" && <WorkspaceView qid={qid} lang={mine} compare={compare && compare !== mine ? compare : null} />}
       {tab === "summary" && comparable && (
@@ -121,6 +108,24 @@ export default function TopicPage() {
       {tab === "missing" && comparable && <MissingView qid={qid} mine={mine} />}
       {tab === "related" && mapArt && <RelatedMap key={`${mapArt.lang}:${mapArt.page_id}`} lang={mapArt.lang} pageId={mapArt.page_id} />}
       {tab === "history" && arts.fi && t.history && <HistoryView pageId={arts.fi.page_id} />}
+      </div>
+    </div>
+  );
+}
+
+/** Small language pills for the toolbar. */
+function Pills({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: string[] }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-ink-3">{label}</span>
+      <div className="flex overflow-hidden rounded border border-line">
+        {options.map((o) => (
+          <button key={o} onClick={() => onChange(o)}
+            className={clsx("px-2 py-0.5 font-semibold uppercase", o === value ? "bg-accent text-white" : "bg-surface-1 text-ink-2 hover:bg-surface-2")}>
+            {o}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

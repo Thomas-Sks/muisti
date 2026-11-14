@@ -4,7 +4,7 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
-import { ArrowUpRight, Check, CircleCheck, Loader2, RotateCcw, X } from "lucide-react";
+import { ArrowUpRight, Check, CircleCheck, Loader2, PanelRightClose, PanelRightOpen, RotateCcw, X } from "lucide-react";
 import {
   wapi, wapi2, wapi3, wapi4, wapi6, type IssueStatus, type IssueType, type Lang, type Workspace, type WsIssue,
   type WsOtherPassage, type WsPassage,
@@ -19,6 +19,7 @@ const TYPES: { type: IssueType; label: string; mark: string; dot: string; strip:
   { type: "missing", label: "Missing", mark: "", dot: "bg-[var(--accent)]", strip: "border-l-[var(--accent)]" },
 ];
 const META = Object.fromEntries(TYPES.map((t) => [t.type, t])) as Record<IssueType, (typeof TYPES)[number]>;
+const HEADER = 100;   // height of the panel header: cards start below it
 const PROVENANCE: Record<WsIssue["provenance"], string> = {
   sql: "Found in SQL", claude: "Found by Claude", "sql+claude": "SQL found · Claude confirmed", "claude+sql": "Claude found · SQL checked",
 };
@@ -35,6 +36,8 @@ export default function WorkspaceView({ qid, lang, compare }: { qid: string; lan
   const [hidden, setHidden] = useState<Set<IssueType>>(new Set());
   const [showHandled, setShowHandled] = useState(false);
   const [local, setLocal] = useState<Record<string, IssueStatus>>({});
+  const [panel, setPanelState] = useState<boolean>(() => { try { return localStorage.getItem("muisti-panel") !== "closed"; } catch { return true; } });
+  const setPanel = (v: boolean) => { setPanelState(v); try { localStorage.setItem("muisti-panel", v ? "open" : "closed"); } catch { /* ignore */ } };
   useEffect(() => { setSelected(null); setLocal({}); }, [qid, lang]);
 
   const statusOf = useCallback((id: string): IssueStatus => local[id] ?? ws.data?.status[id]?.status ?? "open", [local, ws.data]);
@@ -52,30 +55,50 @@ export default function WorkspaceView({ qid, lang, compare }: { qid: string; lan
   const counts = Object.fromEntries(TYPES.map((t) => [t.type, d.issues.filter((i) => i.type === t.type).length])) as Record<IssueType, number>;
   const handled = d.issues.filter((i) => statusOf(i.id) !== "open").length;
 
+  const toggle = (t: IssueType) => setHidden((h) => { const n = new Set(h); if (n.has(t)) n.delete(t); else n.add(t); return n; });
+  const header = (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="text-[13px] font-semibold text-ink">Checks</span>
+        <span className="tabular text-xs text-ink-2"><b className="text-ink">{handled}</b> / {d.issues.length} handled</span>
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-3"><div className="h-full bg-success" style={{ width: `${(100 * handled) / Math.max(1, d.issues.length)}%` }} /></div>
+        <button onClick={() => setPanel(false)} title="Close the panel" className="rounded p-1 text-ink-2 hover:bg-surface-2 hover:text-ink"><PanelRightClose className="size-4" /></button>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {TYPES.map((t) => (
+          <button key={t.type} onClick={() => toggle(t.type)}
+            className={clsx("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
+              hidden.has(t.type) ? "border-line bg-surface-1 text-ink-3" : "border-line-strong bg-surface-1 text-ink")}>
+            <span className={clsx("size-1.5 rounded-full", hidden.has(t.type) ? "bg-surface-3" : t.dot)} />{t.label}
+            <span className="tabular text-ink-3">{counts[t.type]}</span>
+          </button>
+        ))}
+        <label className="ml-auto inline-flex items-center gap-1 text-[11px] text-ink-2">
+          <input type="checkbox" checked={showHandled} onChange={(e) => setShowHandled(e.target.checked)} /> handled
+        </label>
+      </div>
+    </div>
+  );
+  const rail = (
+    <div className="sticky top-[92px] flex flex-col items-center gap-3 py-3">
+      <button onClick={() => setPanel(true)} title="Open the checks" className="rounded p-1.5 text-ink-2 hover:bg-surface-2 hover:text-ink"><PanelRightOpen className="size-4" /></button>
+      {TYPES.map((t) => (
+        <button key={t.type} onClick={() => { setPanel(true); setHidden(new Set(TYPES.map((x) => x.type).filter((x) => x !== t.type))); }}
+          title={`${t.label}: ${counts[t.type]}`} className="flex flex-col items-center gap-0.5">
+          <span className={clsx("size-2.5 rounded-full", t.dot)} /><span className="tabular text-[11px] text-ink-2">{counts[t.type]}</span>
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="space-y-3">
+    <div>
       <Pending qid={qid} d={d} onDone={() => qc.invalidateQueries({ queryKey: ["workspace", qid] })} />
       {compare ? (
-        <CompareView d={d} other={compare} />
+        <div className="px-4 py-3 sm:px-6"><CompareView d={d} other={compare} /></div>
       ) : (
-        <>
-          <div className="sticky top-0 z-20 -mx-1 flex flex-wrap items-center gap-2 bg-bg/95 px-1 py-2 backdrop-blur">
-            {TYPES.map((t) => (
-              <button key={t.type} onClick={() => setHidden((h) => { const n = new Set(h); if (n.has(t.type)) n.delete(t.type); else n.add(t.type); return n; })}
-                className={clsx("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
-                  hidden.has(t.type) ? "border-line bg-surface-1 text-ink-3" : "border-line-strong bg-surface-1 text-ink")}>
-                <span className={clsx("size-2 rounded-full", hidden.has(t.type) ? "bg-surface-3" : t.dot)} />{t.label}
-                <span className="tabular text-ink-3">{counts[t.type]}</span>
-              </button>
-            ))}
-            <label className="ml-2 inline-flex items-center gap-1.5 text-xs text-ink-2">
-              <input type="checkbox" checked={showHandled} onChange={(e) => setShowHandled(e.target.checked)} /> Show handled
-            </label>
-            <span className="tabular ml-auto text-xs text-ink-2"><b className="text-ink">{handled}</b> / {d.issues.length} handled</span>
-            <div className="h-1.5 w-28 overflow-hidden rounded-full bg-surface-3"><div className="h-full bg-success" style={{ width: `${(100 * handled) / Math.max(1, d.issues.length)}%` }} /></div>
-          </div>
-          <Annotated d={d} issues={visible} selected={selected} onSelect={setSelected} statusOf={statusOf} setStatus={setStatus} qid={qid} />
-        </>
+        <Annotated d={d} issues={visible} selected={selected} onSelect={setSelected} statusOf={statusOf} setStatus={setStatus} qid={qid}
+          panel={panel} header={header} rail={rail} openPanel={() => setPanel(true)} />
       )}
     </div>
   );
@@ -97,7 +120,7 @@ function Pending({ qid, d, onDone }: { qid: string; d: Workspace; onDone: () => 
   const needCompare = d.pending.facts || d.pending.wording;
   if (!needCompare && !d.pending.contradictions) return null;
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface-1 px-4 py-2.5 text-sm shadow-sm">
+    <div className="flex flex-wrap items-center gap-3 border-b border-line bg-warning-soft/40 px-6 py-2 text-sm">
       {busy ? <span className="flex items-center gap-2 text-ink-2"><Loader2 className="size-4 animate-spin text-accent" /> {busy}…</span> : <>
         <span className="text-ink-2">Some checks have not run on this article yet.</span>
         {needCompare && <Button kind="primary" onClick={() => run("Comparing facts and wording across the editions (about 30 s)", () => Promise.all([wapi2.facts(qid), wapi.framing(qid)]))}>Compare the editions</Button>}
@@ -110,9 +133,10 @@ function Pending({ qid, d, onDone }: { qid: string; d: Workspace; onDone: () => 
 
 // ── Text with highlights + margin cards ────────────────────────────────────────
 
-function Annotated({ d, issues, selected, onSelect, statusOf, setStatus, qid }: {
+function Annotated({ d, issues, selected, onSelect, statusOf, setStatus, qid, panel, header, rail, openPanel }: {
   d: Workspace; issues: WsIssue[]; selected: string | null; onSelect: (id: string | null) => void;
   statusOf: (id: string) => IssueStatus; setStatus: (id: string, s: IssueStatus) => void; qid: string;
+  panel: boolean; header: React.ReactNode; rail: React.ReactNode; openPanel: () => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
@@ -146,7 +170,7 @@ function Annotated({ d, issues, selected, onSelect, statusOf, setStatus, qid }: 
 
   const layout = useCallback(() => {
     const el = box.current;
-    if (!el) return;
+    if (!el || !panel) return;
     const base = el.getBoundingClientRect().top;
     const want = cards.map((c) => {
       const a = el.querySelector<HTMLElement>(`[data-anchor="${CSS.escape(c.id)}"]`)
@@ -162,7 +186,7 @@ function Annotated({ d, issues, selected, onSelect, statusOf, setStatus, qid }: 
     const gap = 8, q: number[] = new Array(ord.length).fill(0);
     const k = selCard ? ord.findIndex((j) => cards[j].id === selCard) : -1;
     if (k < 0) {
-      for (let j = 0; j < ord.length; j++) q[j] = Math.max(w[j], j ? q[j - 1] + h[j - 1] + gap : 0);
+      for (let j = 0; j < ord.length; j++) q[j] = Math.max(w[j], j ? q[j - 1] + h[j - 1] + gap : HEADER);
     } else {
       q[k] = w[k];
       for (let j = k + 1; j < ord.length; j++) q[j] = Math.max(w[j], q[j - 1] + h[j - 1] + gap);
@@ -174,7 +198,7 @@ function Annotated({ d, issues, selected, onSelect, statusOf, setStatus, qid }: 
     setPos((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
     const last = ord.length ? q[ord.length - 1] + h[ord.length - 1] : 0;
     setHeight(Math.max(last, 0));
-  }, [cards, selCard]);
+  }, [cards, selCard, panel]);
 
   useLayoutEffect(() => { layout(); });
   useEffect(() => {
@@ -186,6 +210,7 @@ function Annotated({ d, issues, selected, onSelect, statusOf, setStatus, qid }: 
 
   const select = (id: string | null, scrollText = false) => {
     onSelect(id);
+    if (id && !panel) openPanel();
     if (id && scrollText) {
       const card = cards.find((c) => c.id === id);
       const a = box.current?.querySelector<HTMLElement>(`[data-anchor="${CSS.escape(id)}"]`)
@@ -208,8 +233,8 @@ function Annotated({ d, issues, selected, onSelect, statusOf, setStatus, qid }: 
 
   let prevTop: string | null = null, prevSec: string | null | undefined = undefined;
   return (
-    <div ref={box} className="relative grid grid-cols-[minmax(0,1fr)_340px] gap-6">
-      <article className="min-w-0 rounded-lg border border-line bg-surface-1 px-8 py-6 shadow-sm">
+    <div ref={box} className={clsx("relative grid min-h-[calc(100vh-92px)]", panel ? "grid-cols-[minmax(0,1fr)_380px]" : "grid-cols-[minmax(0,1fr)_48px]")}>
+      <article className="min-w-0 bg-surface-1 px-6 py-6 sm:px-12">
         <h2 className="serif border-b border-line pb-2 text-[26px] text-ink-strong">{d.article.title}</h2>
         {d.passages.map((p) => {
           const t = top(p.section);
@@ -236,7 +261,10 @@ function Annotated({ d, issues, selected, onSelect, statusOf, setStatus, qid }: 
         <div data-end className="h-px" />
         {nowhere && <p className="mt-4 text-xs text-ink-3">Content not covered anywhere in this article is listed at the bottom of the margin.</p>}
       </article>
-      <aside className="relative" style={{ minHeight: height }}>
+      <aside className="relative border-l border-line bg-bg" style={{ minHeight: panel ? height + 120 : undefined }}>
+        {!panel ? rail : <>
+        <div className="sticky top-[92px] z-20 border-b border-line bg-bg/95 px-3 py-2.5 backdrop-blur">{header}</div>
+        <div className="absolute inset-x-3 top-0">
         {cards.map((c) => (
           <div key={c.id} ref={(el) => { if (el) cardRefs.current.set(c.id, el); else cardRefs.current.delete(c.id); }}
             className="absolute left-0 right-0 transition-[top] duration-200" style={{ top: pos[c.id] ?? 0 }}>
@@ -244,6 +272,8 @@ function Annotated({ d, issues, selected, onSelect, statusOf, setStatus, qid }: 
               statusOf={statusOf} setStatus={setStatus} d={d} qid={qid} />
           </div>
         ))}
+        </div>
+        </>}
       </aside>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Navigate, NavLink, Route, Routes } from "react-router-dom";
+import { Navigate, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import clsx from "clsx";
 import SearchPage from "./pages/SearchPage";
 import HomePage from "./pages/HomePage";
@@ -18,10 +18,11 @@ const NAV = [
 
 export default function App() {
   useEffect(() => { document.documentElement.dataset.theme = "light"; }, []);
+  const wide = useLocation().pathname.startsWith("/topic/");      // the editor workspace uses the full width
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-30 border-b border-line bg-surface-1">
-        <div className="mx-auto flex h-12 max-w-7xl items-center gap-8 px-4 sm:px-6">
+        <div className={clsx("flex h-12 items-center gap-8 px-4 sm:px-6", !wide && "mx-auto max-w-7xl")}>
           <NavLink to="/" className="flex items-baseline gap-2">
             <span className="serif text-[19px] font-semibold text-ink-strong">Muisti</span>
             <span className="hidden text-xs text-ink-3 sm:inline">for Wikipedia editors</span>
@@ -37,7 +38,7 @@ export default function App() {
           </nav>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
+      <main className={wide ? "w-full flex-1" : "mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6"}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/ask" element={<SearchPage />} />
