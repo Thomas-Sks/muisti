@@ -79,12 +79,12 @@ def stats() -> dict:
         "history_range": "SELECT MIN(ts) AS first, MAX(ts) AS last FROM revision",
     }
     global _stats_cache
-    if _stats_cache and time.monotonic() - _stats_cache[0] < 600:      # counts change only on reload
+    if _stats_cache:                                                    # counts change only when the data is reloaded
         return _stats_cache[1]
     out = {}
     with db.pool.cursor() as cur:
         for k, sql in q.items():
-            cur.execute(sql.replace("SELECT ", f"SELECT /*+ MAX_EXECUTION_TIME({config.QUERY_TIMEOUT_MS}) */ ", 1))
+            cur.execute(sql.replace("SELECT ", "SELECT /*+ MAX_EXECUTION_TIME(60000) */ ", 1))
             rows = cur.fetchall()
             if k == "articles_by_lang":
                 out[k] = {r["lang"]: r["n"] for r in rows}
