@@ -388,3 +388,34 @@ def topic_stale(qid: str, refresh: bool = False) -> dict:
     if r is None:
         raise HTTPException(404, "unknown topic")
     return r
+
+
+
+class IssueStatus(BaseModel):
+    lang: Literal["fi", "sv", "en"]
+    status: Literal["open", "fixed", "dismissed"]
+    note: str | None = Field(default=None, max_length=500)
+
+
+@app.get("/api/topic/{qid}/workspace")
+def topic_workspace(qid: str, lang: Literal["fi", "sv", "en"]) -> dict:
+    """The text of one edition with every stored problem anchored to its sentence, and the editor's decisions."""
+    from . import workspace
+    r = workspace.build(_qid(qid), lang)
+    if r is None:
+        raise HTTPException(404, "unknown topic or language")
+    return r
+
+
+@app.put("/api/topic/{qid}/issues/{issue_id:path}")
+def topic_issue_status(qid: str, issue_id: str, body: IssueStatus) -> dict:
+    """Record the editor's decision on one issue (system-versioned: earlier decisions stay queryable)."""
+    from . import workspace
+    workspace.set_status(_qid(qid), body.lang, issue_id, body.status, body.note)
+    return {"ok": True}
+
+
+@app.get("/api/topic/{qid}/issue-history")
+def topic_issue_history(qid: str, lang: Literal["fi", "sv", "en"]) -> dict:
+    from . import workspace
+    return workspace.status_history(_qid(qid), lang)
