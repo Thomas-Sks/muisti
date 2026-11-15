@@ -43,16 +43,35 @@ def _ensure() -> None:
         _ensured = True
 
 
-def _span(text: str, quote: str | None) -> tuple[int, int] | None:
-    """Where the quote sits in the passage, tolerant to spacing and case (quotes are verified verbatim)."""
-    if not quote:
+def _span(text: str, quote: str | None, exact: bool = False) -> tuple[int, int] | None:
+    """Where the quote sits in the passage, tolerant to spacing and case. If one word differs (a quote copied
+    with a slip), the longest run of at least 4 consecutive quote words found verbatim is used instead."""
+    if not quote or not text:
         return None
     words = re.findall(r"\w+", quote, re.U)
     if not words:
         return None
-    rx = r"\W+".join(re.escape(w) for w in words)
-    m = re.search(rx, text, re.I | re.U)
-    return (m.start(), m.end()) if m else None
+    def find(ws):
+        m = re.search(r"\W+".join(re.escape(w) for w in ws), text, re.I | re.U)
+        return (m.start(), m.end()) if m else None
+    if (sp := find(words)) or exact:
+        return sp
+    for n in range(len(words) - 1, 3, -1):           # longest verbatim run first
+        for k in range(0, len(words) - n + 1):
+            if (sp := find(words[k:k + n])):
+                return sp
+    return None
+
+
+def _locate(quote: str | None, preferred: int | None, texts: dict[int, str]) -> tuple[int, int, int] | None:
+    """(chunk_id, start, end) of a quote: in the passage the analysis paired it with, else anywhere in the article."""
+    if not quote:
+        return None
+    order = ([preferred] if preferred in texts else []) + [c for c in texts if c != preferred]
+    for c in order:                                  # partial matches only in the paired passage
+        if (sp := _span(texts[c], quote, exact=c != preferred)):
+            return c, sp[0], sp[1]
+    return None
 
 
 def _cached(cur, kind: str, key: str, rk: str) -> dict | None:
@@ -61,15 +80,15 @@ def _cached(cur, kind: str, key: str, rk: str) -> dict | None:
     return json.loads(row["result"]) if row else None
 
 
-def _compare_marks(f: dict | None, w: dict | None, lang: str, other: str, text_of: dict) -> dict:
+def _compare_marks(f: dict | None, w: dict | None, lang: str, other: str, texts: dict[str, dict[int, str]]) -> dict:
     """Highlights for the side-by-side view: a fact that differs is marked in both columns, a fact one edition
     leaves out only in the column that states it, a wording difference in both. `key` links the two sides."""
     out = {lang: [], other: []}
 
     def put(side: str, chunk: int | None, quote: str | None, **m) -> None:
-        sp = _span(text_of.get(chunk, ""), quote) if chunk else None
-        if sp:
-            out[side].append({"chunk_id": chunk, "start": sp[0], "end": sp[1], **m})
+        loc = _locate(quote, chunk, texts[side])
+        if loc:
+            out[side].append({"chunk_id": loc[0], "start": loc[1], "end": loc[2], **m})
 
     for i, x in enumerate((f or {}).get("facts") or []):
         if x["status"] == "agree":
@@ -111,10 +130,13 @@ def build(qid: str, lang: str) -> dict | None:
     by_idx = {p["chunk_idx"]: p for p in passages}
     issues: list[dict] = []
 
+    my_texts = {p["chunk_id"]: p["text"] for p in passages}
+
     def anchor(chunk_id: int | None, quote: str | None) -> dict:
-        p = by_chunk.get(chunk_id) if chunk_id else None
-        sp = _span(p["text"], quote) if p else None
-        return {"chunk_id": p["chunk_id"] if p else None, "start": sp[0] if sp else None, "end": sp[1] if sp else None}
+        loc = _locate(quote, chunk_id, my_texts)
+        if loc:
+            return {"chunk_id": loc[0], "start": loc[1], "end": loc[2]}
+        return {"chunk_id": chunk_id if chunk_id in by_chunk else None, "start": None, "end": None}
 
     # Facts that differ, or that this edition leaves out (Claude compares; figures checked in SQL; Finnish history).
     f = topics.facts(qid, cached_only=True)
@@ -193,7 +215,7 @@ def build(qid: str, lang: str) -> dict | None:
                                 "distance": (p["matches"].get(lang) or {}).get("distance")}
                                for p in d["passages"]] for o, d in g["languages"].items() if o != lang},
         "covered": COVERED,
-        "compare": {o: _compare_marks(f, w, lang, o, {p["chunk_id"]: p["text"] for p in passages + d["passages"]})
+        "compare": {o: _compare_marks(f, w, lang, o, {lang: my_texts, o: {p["chunk_id"]: p["text"] for p in d["passages"]}})
                     for o, d in g["languages"].items() if o != lang},
     }
 
