@@ -34,21 +34,22 @@ Wikipedia text in MariaDB.
 | **Article** (default tab) | Full text of the edition they edit. Problems are highlighted in the exact sentence, and margin cards are aligned with their sentence. Filter chips (Facts, Contradictions, Wording, Missing) show a count, with progress "n / N handled". Each card can be marked *Fixed* or *Not a problem*. | Quotes are located in the passage text. Statuses go in `issue_status` `WITH SYSTEM VERSIONING`, so who dismissed what and when stays queryable (`FOR SYSTEM_TIME ALL`). |
 | **Compare** (FI / SV / EN switch) | Two read-only columns, aligned passage by passage. A fact that differs is highlighted **on both sides**. A fact one edition leaves out is highlighted **only on the side that states it** ("not in en"). Wording differences appear on both sides, and passages with no equivalent carry an "Only in Finnish" band. Hovering a highlight lights up its counterpart; clicking scrolls the other column to it. | Passage alignment from the stored passage vectors (`VEC_DISTANCE_COSINE`). Highlights come from the stored analyses, so this mode makes no new AI call. |
 | **Facts table** | Every fact compared across the three editions (32 on the Finnish Civil War): differ, missing, agree. Every value is checked in SQL. For Finnish, "since 2014" shows how long the value has stood, with the edit that introduced it. | Claude extracts the facts from aligned passages; each figure and date is looked up in `chunk_number` / `chunk_date`. The age of a value is traced through the 862,076 revisions of the system-versioned history. |
-| **Related articles** | A map of the closest articles by meaning. Clicking an article adds its own neighbours. **Nothing is red until the editor clicks "Check this article"**: the stored result appears at once if someone already ran it, otherwise Claude checks it in about 15 s. | HNSW search on whole-article vectors. Contradictions are found in two ways. Dates: SQL finds candidates (same anchor date, another date 1 to 15 days apart, close in meaning), then Claude judges each one. Figures: Claude reads SQL-preselected pairs, then SQL verifies every figure it quotes. Results are stored per article revision. |
+| **Related articles** | A map of the closest articles by meaning. Clicking an article adds its own neighbours. **Nothing is red until the editor clicks "Check this article"**: the stored result appears at once if someone already ran it, otherwise Claude checks it in about 15 s. | HNSW search on whole-article vectors. Contradictions are found in two ways. Only other articles are searched, never the same topic in another language. Dates: SQL finds candidates (same anchor date, another date 1 to 15 days apart, close in meaning), then Claude judges each one. Figures: Claude reads SQL-preselected pairs, then SQL verifies every figure it quotes. Results are stored per article revision. |
 | **History** | How the Finnish article changed: edits, reverts, who changed a value and when. | `FOR SYSTEM_TIME AS OF / ALL` on `article_history`, precomputed `revision` table. |
 | **Edit on Wikipedia** | Links that open the real editor at the right section. Wikipedia cannot be embedded (`X-Frame-Options: DENY`). | |
 
 ## What it finds (real data, reproducible)
 
-On *Suomen sisällissota*, the Finnish article gets **64 checks**: 15 facts, 11 contradictions with other articles,
+On *Suomen sisällissota*, the Finnish article gets **63 checks**: 15 facts, 10 contradictions with other articles,
 8 wording differences and 30 passages missing compared with the other editions.
 
 - **The three editions disagree on the death toll.** Swedish: about 36,000. English: 39,000 (36,000 Finns).
   Finnish: about 38,000. The Finnish figure was changed from 37,000 to 38,000 on 8 December 2014 by an anonymous
   editor, and has stood since then.
 - **Wikipedia disagrees with itself.** *Suomen sisällissota* ends the war on 15 May 1918, while
-  *Itsenäisen Suomen historia* and *Suomen poliittinen historia* say 16 May 1918. On this article, 11 of the 18
-  candidates were kept (8 dates, 3 figures). The 7 rejected ones stay visible with Claude's reason.
+  *Itsenäisen Suomen historia* and *Suomen poliittinen historia* say 16 May 1918. On this article, 10 of the 15
+  candidates from other articles were kept (7 dates, 3 figures). The 5 rejected ones stay visible with Claude's
+  reason. Differences with the same topic in another language are left to the Facts table, not counted here.
 - **Russia's recognition of Finnish independence**: 4 January 1918 in Swedish, 31 December 1917 in English, not
   stated in Finnish.
 - **Wording that takes sides.** Swedish says 88 people were "murdered" during the first five days. Finnish

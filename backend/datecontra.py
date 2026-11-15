@@ -43,6 +43,8 @@ pairs AS (
   JOIN chunk_date da ON da.chunk_id = a.chunk_id
   JOIN chunk_date db ON db.d = da.d AND db.chunk_id <> a.chunk_id
   JOIN chunk ob      ON ob.chunk_id = db.chunk_id AND NOT (ob.lang = %(lang)s AND ob.page_id = %(page_id)s)
+  -- other articles only: the other editions of the same topic are compared in the Facts table
+  JOIN article oa    ON oa.lang = ob.lang AND oa.page_id = ob.page_id AND (%(qid)s IS NULL OR oa.wikidata_id IS NULL OR oa.wikidata_id <> %(qid)s)
   JOIN chunk_date xa ON xa.chunk_id = a.chunk_id  AND xa.d <> da.d
   JOIN chunk_date xb ON xb.chunk_id = db.chunk_id AND xb.d <> da.d AND xb.d <> xa.d
                     AND ABS(DATEDIFF(xa.d, xb.d)) BETWEEN 1 AND {MAX_DAYS}
@@ -104,10 +106,36 @@ def _norm(s: str) -> str:
     return _WS.sub(" ", s).strip().lower()
 
 
+def _qid(cur, lang: str, page_id: int) -> str | None:
+    cur.execute("SELECT wikidata_id FROM article WHERE lang = %s AND page_id = %s", (lang, page_id))
+    row = cur.fetchone()
+    return row["wikidata_id"] if row else None
+
+
+def same_topic(lang: str, page_id: int) -> set[tuple[str, int]]:
+    """The editions of this article's topic in the three languages (itself included)."""
+    with db.pool.cursor() as cur:
+        q = _qid(cur, lang, page_id)
+        if not q:
+            return {(lang, page_id)}
+        cur.execute("SELECT lang, page_id FROM article WHERE wikidata_id = %s", (q,))
+        return {(r["lang"], r["page_id"]) for r in cur.fetchall()} | {(lang, page_id)}
+
+
+def split_same_topic(result: dict, lang: str, page_id: int) -> dict:
+    """Results stored before other editions were excluded: findings against the same topic in another language
+    move to `same_topic` (the Facts table covers them); only other articles stay as contradictions."""
+    ed = same_topic(lang, page_id)
+    other = lambda x: (x["b"]["lang"], x["b"]["page_id"]) not in ed
+    return {**result, "contradictions": [x for x in result.get("contradictions", []) if other(x)],
+            "rejected": [x for x in result.get("rejected", []) if other(x)],
+            "same_topic": [x for x in result.get("contradictions", []) if not other(x)]}
+
+
 def candidates(lang: str, page_id: int) -> tuple[list[dict], float]:
     """SQL candidates, one per (other article, pair of dates), best first."""
     with db.pool.cursor() as cur:
-        rows, t = db.timed(cur, CANDIDATES_SQL, {"lang": lang, "page_id": page_id})
+        rows, t = db.timed(cur, CANDIDATES_SQL, {"lang": lang, "page_id": page_id, "qid": _qid(cur, lang, page_id)})
         if not rows:
             return [], t
         ids = tuple({r["ca"] for r in rows} | {r["cb"] for r in rows})
@@ -188,7 +216,7 @@ def find(lang: str, page_id: int) -> dict | None:
         "model": MODEL, "method": "sql+claude", "pairs_checked": len(cands) + nums["pairs_checked"],
         "date_candidates": len(cands), "number_pairs": nums["pairs_checked"],
         "contradictions": confirmed, "rejected": rejected,
-        "sql": CANDIDATES_SQL.replace("%(lang)s", repr(lang)).replace("%(page_id)s", str(page_id)),
+        "sql": CANDIDATES_SQL.replace("%(lang)s", repr(lang)).replace("%(page_id)s", str(page_id)).replace("%(qid)s", repr(art.get("wikidata_id"))),
         "number_check_sql": factcheck.SQL_SHOWN,
         "timings": {"mariadb_ms": round(t_sql + nums["timings"]["mariadb_ms"], 1), "llm_s": round(t_llm + nums["timings"]["llm_s"], 1),
                     "total_s": round(time.perf_counter() - t0, 1)},
@@ -231,10 +259,11 @@ ORDER BY c.chunk_idx LIMIT 30"""
 
 # Nearest passages of other articles (HNSW: the stored vector is a constant), keeping those with numbers.
 NUMBER_NEIGHBOURS_SQL = f"""SELECT {HINT} c.chunk_id, c.lang, c.page_id, c.section, c.text, a.title, a.rev_id, x.d
-FROM (SELECT chunk_id, VEC_DISTANCE_COSINE(embedding, %(vec)s) AS d FROM chunk_vector ORDER BY d LIMIT 20) x
+FROM (SELECT chunk_id, VEC_DISTANCE_COSINE(embedding, %(vec)s) AS d FROM chunk_vector ORDER BY d LIMIT 40) x
 JOIN chunk c   ON c.chunk_id = x.chunk_id
 JOIN article a ON a.lang = c.lang AND a.page_id = c.page_id
 WHERE NOT (c.lang = %(lang)s AND c.page_id = %(page_id)s)
+  AND (%(qid)s IS NULL OR a.wikidata_id IS NULL OR a.wikidata_id <> %(qid)s)              -- other articles, not the same topic in another language
   AND x.d < IF(c.lang = %(lang)s, {SAME_LANG_DISTANCE}, 0.36)
   -- a figure of the same order (x0.5 to x2) that the source passage does not have: something to compare
   AND EXISTS (SELECT 1 FROM chunk_number nb
@@ -247,10 +276,11 @@ ORDER BY x.d"""
 def number_pairs(lang: str, page_id: int, title: str, rev_id: int) -> tuple[list[dict], float]:
     t_sql, pairs, seen = 0.0, [], set()
     with db.pool.cursor() as cur:
+        qid = _qid(cur, lang, page_id)
         sources, t = db.timed(cur, NUMBER_SOURCES_SQL, {"lang": lang, "page_id": page_id})
         t_sql += t
         for s in sources:
-            near, t = db.timed(cur, NUMBER_NEIGHBOURS_SQL, {"vec": s["embedding"], "lang": lang, "page_id": page_id, "src": s["chunk_id"]})
+            near, t = db.timed(cur, NUMBER_NEIGHBOURS_SQL, {"vec": s["embedding"], "lang": lang, "page_id": page_id, "src": s["chunk_id"], "qid": qid})
             t_sql += t
             for n in near:
                 if (s["chunk_id"], n["chunk_id"]) in seen:

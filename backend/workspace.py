@@ -177,6 +177,9 @@ def build(qid: str, lang: str) -> dict | None:
     with db.pool.cursor() as cur:
         c = _cached(cur, "contra2", f"{lang}:{me['page_id']}", f"{lang}:{me['rev_id']}")
         miss = _cached(cur, f"missing2:{lang}", qid, topics._rev_key(g["articles"]))
+    if c:                                              # other articles only; other editions are in the facts
+        from .datecontra import split_same_topic
+        c = split_same_topic(c, lang, me["page_id"])
     for i, x in enumerate((c or {}).get("contradictions") or []):
         issues.append({"id": f"contra:{x.get('kind', 'date')}:{x['b']['chunk_id']}:{x['value_a']}"[:190], "type": "contradiction",
                        "severity": "high", "title": x["topic"], "status_label": f"vs {x['b']['title']}",

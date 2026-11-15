@@ -243,6 +243,7 @@ export interface Contradictions {
     days?: number; same_event?: boolean; verified?: boolean; kind?: "date" | "number";
     sql_check?: { a: SqlCheck; b: SqlCheck } }[];
   rejected?: Contradictions["contradictions"];
+  same_topic?: Contradictions["contradictions"];   // differences with the other editions of the same topic
   method?: string; date_candidates?: number; number_pairs?: number;
   sql: string; timings: { mariadb_ms: number; llm_s: number; total_s: number };
 }

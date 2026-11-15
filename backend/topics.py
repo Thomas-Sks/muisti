@@ -610,11 +610,11 @@ def contradictions_stored(lang: str, page_id: int, refresh: bool = False) -> dic
             cur.execute(CACHE_GET_SQL, ("contra2", key, rk))
             hit = cur.fetchone()
             if hit:
-                return json.loads(hit["result"]) | {"cached": True}
+                return datecontra.split_same_topic(json.loads(hit["result"]), lang, page_id) | {"cached": True}
     r = datecontra.find(lang, page_id)
     if r is None:
         return None
     with db.pool.cursor() as cur:
         cur.execute(CACHE_PUT_SQL, ("contra2", key, rk, datecontra.MODEL, json.dumps(r, ensure_ascii=False, default=str),
                                     None, r.get("tokens"), r["timings"]["total_s"]))
-    return r | {"cached": False}
+    return datecontra.split_same_topic(r, lang, page_id) | {"cached": False}

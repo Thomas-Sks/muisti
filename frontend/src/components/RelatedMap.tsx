@@ -261,7 +261,7 @@ export default function RelatedMap({ lang, pageId }: { lang: Lang; pageId: numbe
               <div className="border-t border-line pt-3">
                 <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-2">Contradictions with other articles</h4>
                 <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-xs text-ink-3">
-                  <li><b className="font-medium text-ink-2">MariaDB finds the candidates:</b> passages of other articles, in any language, that give the same anchor date but a different date a few days away, and are close in meaning.</li>
+                  <li><b className="font-medium text-ink-2">MariaDB finds the candidates:</b> passages of other articles (not the same topic in another language), in any language, that give the same anchor date but a different date a few days away, and are close in meaning.</li>
                   <li><b className="font-medium text-ink-2">Claude checks each one:</b> same event, and really incompatible? Rejected candidates stay visible.</li>
                   <li><b className="font-medium text-ink-2">Figures</b> (deaths, strengths) are read by Claude in close passages, then every figure it quotes is looked up in MariaDB: it must be in the Wikipedia text.</li>
                 </ol>
@@ -273,7 +273,15 @@ export default function RelatedMap({ lang, pageId }: { lang: Lang; pageId: numbe
                     <p className="mb-1 text-xs text-ink-2"><b className="tabular text-ink">{selContra.date_candidates ?? selContra.pairs_checked}</b> date candidates from SQL · <b className="tabular text-ink">{selContra.number_pairs ?? 0}</b> passage pairs read for figures · <b className="tabular text-ink">{selContra.contradictions.length}</b> kept</p>
                     {selContra.contradictions.length === 0
                       ? <p className="flex items-center gap-2 text-ink-2"><CircleCheck className="size-4 text-success" /> No contradiction confirmed.</p>
-                      : <p className="flex items-center gap-2 font-medium text-ink"><TriangleAlert className="size-4 text-[var(--critical)]" /> {selContra.contradictions.length} possible contradiction{selContra.contradictions.length === 1 ? "" : "s"}, shown below the map.</p>}
+                      : <p className="flex items-center gap-2 font-medium text-ink"><TriangleAlert className="size-4 text-[var(--critical)]" /> {selContra.contradictions.length} possible contradiction{selContra.contradictions.length === 1 ? "" : "s"} with other articles, shown below the map.</p>}
+                    {(selContra.same_topic?.length ?? 0) > 0 && (
+                      <p className="mt-1 text-xs text-ink-2">
+                        {selContra.same_topic!.length} difference{selContra.same_topic!.length === 1 ? "" : "s"} with the{" "}
+                        {[...new Set(selContra.same_topic!.map((c) => LANG_NAME[c.b.lang]))].join(" and ")} edition of this topic: not
+                        another article, so they are compared in the{" "}
+                        {sel.wikidata_id ? <Link to={`/topic/${sel.wikidata_id}?tab=facts`} className="font-medium text-accent hover:underline">Facts table</Link> : "Facts table"}.
+                      </p>
+                    )}
                     <p className="mt-1 text-[11px] text-ink-3">{selContra.cached ? "Stored result for this revision" : `Checked now in ${selContra.timings.total_s}s`} ·{" "}
                       <button onClick={() => void check(sel.key, true)} className="font-medium text-accent hover:underline">check again</button></p>
                   </div>
