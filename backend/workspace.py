@@ -133,8 +133,9 @@ def build(qid: str, lang: str) -> dict | None:
         chunk = (grp.get(lang) or {}).get("chunk_id")
         if x["status"] == "missing" and lang not in x["missing_in"]:
             continue
-        issues.append({"id": f"fact:{i}", "type": "fact", "severity": "high" if x["status"] == "differ" else "medium",
-                       "title": x["subject"], "status_label": "Differs" if x["status"] == "differ" else f"Not stated here",
+        absent = mine is None or lang in x.get("missing_in", [])     # this edition gives no value at all
+        issues.append({"id": f"fact:{i}", "type": "fact", "severity": "medium" if absent else "high",
+                       "title": x["subject"], "status_label": "Not stated here" if absent else "Differs",
                        "provenance": "claude+sql", **anchor(chunk, mine["quote"] if mine else None),
                        "detail": {**x, "history": stale_by_fact.get(i), "group": grp}})
 

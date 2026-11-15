@@ -301,7 +301,14 @@ function Paragraph({ p, spans, para, isSel, onSelect }: {
   return (
     <p data-chunk={p.chunk_id} className="serif my-2.5 whitespace-pre-line text-[16.5px] leading-[1.7] text-ink">
       {parts}
-      {para.map((i) => (
+      {para.map((i) => i.type === "fact" ? (
+        // a fact this edition does not state: nothing to highlight, so say it where it would go
+        <button key={i.id} data-anchor={i.id} onClick={() => onSelect(i.id)} title={`${i.title}: stated in the other editions, not here`}
+          className={clsx("ml-1.5 inline-flex items-center rounded border border-dashed border-[#d29a00] bg-[color-mix(in_oklab,var(--diff-removed)_30%,transparent)] px-1.5 align-[2px] font-sans text-[11.5px] font-medium leading-5 text-[#7a5800] hover:bg-[color-mix(in_oklab,var(--diff-removed)_60%,transparent)]",
+            isSel(i.id) && "ring-2 ring-[var(--accent)] ring-offset-1")}>
+          + {i.title}
+        </button>
+      ) : (
         <button key={i.id} data-anchor={i.id} onClick={() => onSelect(i.id)} title={i.title}
           className={clsx("ml-1 inline-block size-2.5 rounded-full align-middle", META[i.type].dot, isSel(i.id) && "ring-2 ring-[var(--accent)] ring-offset-1")} />
       ))}
