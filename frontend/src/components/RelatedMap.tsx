@@ -2,6 +2,7 @@
 // (MariaDB HNSW index on whole-article vectors). Any article can be checked against the others for
 // contradicting facts; results are stored in MariaDB and drawn as red links. Nothing is shown in red before the
 // visitor asks for a check: a check returns the stored result at once when someone has already run it.
+import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -49,7 +50,9 @@ function relax(nodes: Map<string, Node>, edges: Edge[], centre: string) {
   }
 }
 
-export default function RelatedMap({ lang, pageId }: { lang: Lang; pageId: number }) {
+export default function RelatedMap({ lang, pageId, editions = [], onLang }: {
+  lang: Lang; pageId: number; editions?: Lang[]; onLang?: (l: Lang) => void;
+}) {
   const qc = useQueryClient();
   const centre = `${lang}:${pageId}`;
   const [nodes, setNodes] = useState<Map<string, Node>>(new Map());
@@ -172,10 +175,24 @@ export default function RelatedMap({ lang, pageId }: { lang: Lang; pageId: numbe
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-ink-2">
-        Articles in the {LANG_NAME[lang]} Wikipedia closest in meaning to this one. Click an article to add its own neighbours,
-        then check it for facts that contradict the others.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-ink-2">
+          Articles in the {LANG_NAME[lang]} Wikipedia closest in meaning to this one. Click an article to add its own neighbours,
+          then check it for facts that contradict the others.
+        </p>
+        {editions.length > 1 && onLang && (
+          <div className="flex items-center gap-2 text-xs" role="radiogroup" aria-label="Map language">
+            <span className="text-ink-3">Search in</span>
+            {editions.map((l) => (
+              <label key={l} className={clsx("flex cursor-pointer items-center gap-1.5 rounded border px-2 py-1",
+                l === lang ? "border-accent bg-accent/5 font-semibold text-ink" : "border-line text-ink-2 hover:border-accent")}>
+                <input type="radio" name="map-lang" className="accent-[var(--accent)]" checked={l === lang} onChange={() => onLang(l)} />
+                {LANG_NAME[l]}
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="grid gap-3 lg:grid-cols-[1fr_340px]">
         <div className="relative overflow-hidden rounded-xl border border-line bg-surface-1 shadow-sm">
           <div className="absolute left-3 top-3 z-10 flex flex-wrap items-center gap-3 rounded-lg bg-surface-1/90 px-2.5 py-1.5 text-[11px] text-ink-3 backdrop-blur">

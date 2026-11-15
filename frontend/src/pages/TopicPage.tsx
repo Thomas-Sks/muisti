@@ -105,7 +105,8 @@ export default function TopicPage() {
       {tab === "facts" && comparable && (facts.isFetching ? <Working what="Comparing facts across the editions" /> : facts.error ? <ErrorBox error={facts.error} /> : fd ? <FactsView qid={qid} f={fd} mine={mine} arts={arts} /> : facts.data && !facts.data.available ? <Message>{facts.data.reason}</Message> : null)}
       {tab === "wording" && comparable && (framing.isFetching ? <Working what="Comparing wording, blame, certainty and naming" /> : framing.error ? <ErrorBox error={framing.error} /> : wd ? <WordingView qid={qid} f={wd} mine={mine} /> : framing.data && !framing.data.available ? <Message>{framing.data.reason}</Message> : null)}
       {tab === "missing" && comparable && <MissingView qid={qid} mine={mine} />}
-      {tab === "related" && mapArt && <RelatedMap key={`${mapArt.lang}:${mapArt.page_id}`} lang={mapArt.lang} pageId={mapArt.page_id} />}
+      {tab === "related" && mapArt && <RelatedMap key={`${mapArt.lang}:${mapArt.page_id}`} lang={mapArt.lang} pageId={mapArt.page_id}
+        editions={t.articles.map((a) => a.lang)} onLang={setMine} />}
       {tab === "history" && arts.fi && t.history && <HistoryView pageId={arts.fi.page_id} />}
       </div>
     </div>
